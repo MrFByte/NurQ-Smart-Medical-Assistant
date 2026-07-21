@@ -1,5 +1,5 @@
 import pytest
-from app.models.domain import IntakeSession, VisitClassification
+from app.models.domain import IntakeSession, VisitClassification, Medication, Disability, MedicalFinding
 from pydantic import ValidationError
 import json
 
@@ -59,21 +59,16 @@ def test_ai_json_schema_parsing():
     # Let's test that the typed arrays parse correctly when applied to the session.
     session = IntakeSession()
     
-    # 1. Medications
-    meds_data = payload["fields"]["medications"]["value"]
-    # We assign it directly and pydantic will validate when we use model_validate if we re-parse, 
-    # but here we manually test if it fits the schema by unpacking.
-    session.medications = meds_data
-    # 2. Disabilities
-    disabilities_data = payload["fields"]["disabilities"]["value"]
-    session.disabilities = disabilities_data
-    # 3. Medical Findings
-    findings_data = payload["fields"]["medical_findings"]["value"]
-    session.medical_findings = findings_data
+    # Build proper model instances from the raw dicts (as the real
+    # orchestrator would do) so that model_dump() serialises cleanly.
+    session.medications = [Medication(**m) for m in payload["fields"]["medications"]["value"]]
+    session.disabilities = [Disability(**d) for d in payload["fields"]["disabilities"]["value"]]
+    session.medical_findings = [MedicalFinding(**f) for f in payload["fields"]["medical_findings"]["value"]]
     
     # Dump and validate
     session_dict = session.model_dump()
     parsed_session = IntakeSession.model_validate(session_dict)
+
     
     assert len(parsed_session.medications) == 1
     assert parsed_session.medications[0].name == "Metformin"

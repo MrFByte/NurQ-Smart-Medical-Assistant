@@ -77,11 +77,19 @@ class GroqProvider(LLMProvider, STTProvider):
         self, user_message: str, conversation: list[dict]
     ) -> EmergencyResult:
         system_prompt = (
-            "You are an emergency detection system. Review the patient's message. "
-            "Red-flag list: chest pain, difficulty breathing, suicidal ideation, stroke symptoms, severe bleeding, loss of consciousness. "
-            "Bias toward over-flagging. A false positive is acceptable; a missed emergency is not. "
+            "You are an emergency keyword detector. Your ONLY job is to identify if the patient's "
+            "message contains any of these exact red-flag conditions:\n"
+            "  - chest pain, difficulty breathing, suicidal ideation, stroke symptoms, "
+            "severe bleeding, loss of consciousness, cardiac arrest, heart attack, seizure\n\n"
+            "STRICT RULES:\n"
+            "1. ONLY flag a keyword if the patient has EXPLICITLY and LITERALLY stated it. "
+            "Do NOT infer, assume, or extrapolate. If the word 'chest' is not in the message, "
+            "'chest pain' is NOT triggered.\n"
+            "2. Return triggered_keywords as an EMPTY list [] if no red-flag words are literally present.\n"
+            "3. Never flag conditions based on lifestyle factors (overwork, stress, skipping meals) alone.\n"
+            "4. When in doubt, return is_emergency: false and an empty list.\n\n"
             "You MUST return a JSON object exactly matching this schema:\n"
-            '{"is_emergency": true/false, "triggered_keywords": ["<keyword1>"], "recommended_action": "<action>"}'
+            '{"is_emergency": true/false, "triggered_keywords": ["<keyword>"], "recommended_action": "<action or null>"}'
         )
         messages = self._build_messages(system_prompt, user_message, conversation)
 

@@ -49,3 +49,5 @@ edge-tts
 pytest
 pytest-asyncio
 httpx
+python-json-logger
+python-json-logger

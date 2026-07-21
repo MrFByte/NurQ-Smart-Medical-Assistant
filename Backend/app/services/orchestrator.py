@@ -23,20 +23,15 @@ class IntakeOrchestrator:
         self.state_machine = state_machine
 
     async def process_message(
-        self, session_id: uuid.UUID, message_id: uuid.UUID, content: str
+        self, session_id: uuid.UUID, content: str
     ) -> SendMessageResponse:
         
         session = await self.repo.get_session(session_id)
         if not session:
             raise ValueError(f"Session {session_id} not found")
 
-        if await self.repo.message_exists(session_id, message_id):
-            logger.warning(f"Message {message_id} already exists for session {session_id}.")
-            return SendMessageResponse(
-                assistant_message="I have already received that message.",
-                session_status=session.status,
-                updated_fields=[]
-            )
+        # Generate message ID server-side
+        message_id = uuid.uuid4()
 
         user_turn = ConversationTurn(id=message_id, role="user", content=content)
         session.conversation_log.append(user_turn)
@@ -52,21 +47,36 @@ class IntakeOrchestrator:
         await self.repo.append_turn(session_id, user_turn)
         
         # --- Classification Upgrade Logic ---
-        from app.utils.classification import determine_classification_from_keywords, upgrade_classification
-        from app.models.schemas import CLASSIFICATION_DISPLAY, EmergencyAlert
-        
-        new_classification = determine_classification_from_keywords(emergency_result.triggered_keywords)
+        from app.utils.classification import (
+            determine_classification_from_keywords, upgrade_classification,
+            KEYWORD_TO_CLASSIFICATION
+        )
+        from app.models.schemas import CLASSIFICATION_DISPLAY, EmergencyAlert, get_emergency_contacts
+        from app.models.domain import VisitClassification
+
+        # --- Validate LLM keywords against what the patient literally said ---
+        # Build a searchable corpus: current message + full conversation text
+        conversation_text = content.lower() + " " + " ".join(
+            t.get("content", "").lower() for t in history
+        )
+        validated_keywords = [
+            kw for kw in emergency_result.triggered_keywords
+            if kw.lower() in KEYWORD_TO_CLASSIFICATION  # must be a known red-flag
+            and kw.lower() in conversation_text          # must actually appear in the conversation
+        ]
+
+        new_classification = determine_classification_from_keywords(validated_keywords)
         current_classification = session.visit_classification
         upgraded_classification = upgrade_classification(current_classification, new_classification)
         
         if upgraded_classification != current_classification:
             session.visit_classification = upgraded_classification
             
-        # Check if we hit CRITICAL (either newly upgraded or was already critical, though it shouldn't have been created)
-        if upgraded_classification == "CRITICAL" or emergency_result.is_emergency:
+        # Only escalate if validated keywords (not hallucinated ones) triggered CRITICAL
+        if upgraded_classification == VisitClassification.CRITICAL:
             session.status = "emergency_escalated"
             session.emergency.is_emergency = True
-            session.emergency.triggered_keywords = emergency_result.triggered_keywords
+            session.emergency.triggered_keywords = validated_keywords
             session.emergency.recommended_action = emergency_result.recommended_action
             session.emergency.triggered_at_turn = message_id
             
@@ -82,12 +92,14 @@ class IntakeOrchestrator:
             await self.repo.append_turn(session_id, assistant_turn)
             
             return SendMessageResponse(
+                message_id=message_id,
                 assistant_message=safety_msg,
                 session_status=session.status,
                 visit_classification=CLASSIFICATION_DISPLAY[upgraded_classification],
                 updated_fields=[],
                 emergency_alert=EmergencyAlert(
-                    message="Based on what you've described, this may be a life-threatening emergency. Please contact emergency services immediately."
+                    message="Based on what you've described, this may be a life-threatening emergency. Please contact emergency services immediately.",
+                    emergency_contacts=get_emergency_contacts(emergency_result.triggered_keywords)
                 )
             )
             
@@ -98,6 +110,7 @@ class IntakeOrchestrator:
             session.status = "completed"
             await self.repo.update_session(session)
             return SendMessageResponse(
+                message_id=message_id,
                 assistant_message="Thank you, I have all the information I need.",
                 session_status=session.status,
                 updated_fields=updated_fields
@@ -112,6 +125,7 @@ class IntakeOrchestrator:
         await self.repo.append_turn(session_id, assistant_turn)
         
         return SendMessageResponse(
+            message_id=message_id,
             assistant_message=next_q,
             session_status=session.status,
             updated_fields=updated_fields

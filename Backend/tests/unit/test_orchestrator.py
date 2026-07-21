@@ -77,12 +77,14 @@ async def test_process_message_normal(mock_repo, state_machine):
     session = IntakeSession()
     await mock_repo.create_session(session)
     
-    msg_id = uuid.uuid4()
-    response = await orchestrator.process_message(session.id, msg_id, "I have chest pain")
+    response = await orchestrator.process_message(session.id, "I have chest pain")
     
     assert response.session_status == "in_progress"
     assert "chief_complaint.summary" in response.updated_fields
     assert "Mocked question" in response.assistant_message
+    # Server should generate and return a message_id
+    assert response.message_id is not None
+    assert isinstance(response.message_id, uuid.UUID)
     
     # Verify DB state
     updated_session = await mock_repo.get_session(session.id)
@@ -96,28 +98,27 @@ async def test_process_message_emergency(mock_repo, state_machine):
     session = IntakeSession()
     await mock_repo.create_session(session)
     
-    msg_id = uuid.uuid4()
-    response = await orchestrator.process_message(session.id, msg_id, "I have severe chest pain")
+    response = await orchestrator.process_message(session.id, "I have severe chest pain")
     
     assert response.session_status == "emergency_escalated"
     assert "immediate medical attention" in response.assistant_message
+    assert response.message_id is not None
     
     updated_session = await mock_repo.get_session(session.id)
     assert updated_session.status == "emergency_escalated"
     assert updated_session.emergency.is_emergency is True
 
 @pytest.mark.asyncio
-async def test_idempotency(mock_repo, state_machine):
+async def test_message_id_unique_per_call(mock_repo, state_machine):
+    """Each call to process_message should produce a unique server-generated message_id."""
     llm = MockLLMProvider()
     orchestrator = IntakeOrchestrator(mock_repo, llm, state_machine)
     
     session = IntakeSession()
     await mock_repo.create_session(session)
     
-    msg_id = uuid.uuid4()
-    # First call
-    await orchestrator.process_message(session.id, msg_id, "Hello")
+    response1 = await orchestrator.process_message(session.id, "Hello")
+    response2 = await orchestrator.process_message(session.id, "Hello again")
     
-    # Second call with same ID
-    response = await orchestrator.process_message(session.id, msg_id, "Hello again")
-    assert response.assistant_message == "I have already received that message."
+    assert response1.message_id != response2.message_id
+

@@ -7,6 +7,7 @@ from app.dependencies import get_db_session
 
 from app.models.schemas import (
     CreateSessionRequest, CreateSessionResponse,
+    get_emergency_contacts,
     SendMessageRequest, SendMessageResponse, SummaryResponse,
     EmergencyAlert, CLASSIFICATION_DISPLAY
 )
@@ -46,7 +47,8 @@ async def create_session(
             visit_classification=CLASSIFICATION_DISPLAY[classification],
             is_emergency=True,
             emergency_alert=EmergencyAlert(
-                message="Based on what you've described, this may be a life-threatening emergency. Please contact emergency services immediately."
+                message="Based on what you've described, this may be a life-threatening emergency. Please contact emergency services immediately.",
+                emergency_contacts=get_emergency_contacts(emergency_result.triggered_keywords)
             )
         )
         
@@ -85,7 +87,7 @@ async def send_message(
     orchestrator: IntakeOrchestrator = Depends(get_orchestrator)
 ):
     try:
-        response = await orchestrator.process_message(session_id, request.message_id, request.content)
+        response = await orchestrator.process_message(session_id, request.content)
         return response
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -95,7 +97,6 @@ async def send_message(
 @router.post("/session/{session_id}/audio-message", response_model=SendMessageResponse)
 async def send_audio_message(
     session_id: uuid.UUID,
-    message_id: uuid.UUID = Form(...),
     audio: UploadFile = File(...),
     orchestrator: IntakeOrchestrator = Depends(get_orchestrator),
     stt: STTProvider = Depends(get_stt),
@@ -108,7 +109,7 @@ async def send_audio_message(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not transcribe audio.")
     
     try:
-        response = await orchestrator.process_message(session_id, message_id, transcript)
+        response = await orchestrator.process_message(session_id, transcript)
         
         tts_bytes = await tts.synthesize(response.assistant_message)
         if tts_bytes:

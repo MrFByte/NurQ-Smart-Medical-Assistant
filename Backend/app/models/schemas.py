@@ -14,13 +14,30 @@ class EmergencyContact(BaseModel):
     number: str
 
 
+EMERGENCY_CONTACTS_MAP = {
+    "suicidal ideation": [
+        EmergencyContact(label="Suicide Helpline", number="iCall: 9152987821"),
+        EmergencyContact(label="Emergency Services", number="112")
+    ],
+    "default": [
+        EmergencyContact(label="Emergency Services", number="112"),
+        EmergencyContact(label="Ambulance", number="108")
+    ]
+}
+
+def get_emergency_contacts(keywords: list[str] = None) -> list[EmergencyContact]:
+    if not keywords:
+        return EMERGENCY_CONTACTS_MAP["default"]
+    
+    for kw in keywords:
+        if kw.lower() in EMERGENCY_CONTACTS_MAP:
+            return EMERGENCY_CONTACTS_MAP[kw.lower()]
+            
+    return EMERGENCY_CONTACTS_MAP["default"]
+
 class EmergencyAlert(BaseModel):
     message: str
-    emergency_contacts: list[EmergencyContact] = [
-        EmergencyContact(label="Emergency Services", number="112"),
-        EmergencyContact(label="Ambulance",          number="108"),
-        EmergencyContact(label="Suicide Helpline",   number="iCall: 9152987821"),
-    ]
+    emergency_contacts: list[EmergencyContact]
 
 
 # ---------------------------------------------------------------------------
@@ -96,11 +113,11 @@ class CreateSessionResponse(BaseModel):
 
 
 class SendMessageRequest(BaseModel):
-    message_id: UUID
     content: str
 
 
 class SendMessageResponse(BaseModel):
+    message_id: UUID              # server-generated ID for this exchange
     assistant_message: str
     session_status: str
     visit_classification: Optional[VisitClassificationInfo] = None
@@ -136,7 +153,7 @@ class ClinicianNoteRequest(BaseModel):
 
 
 class ClinicianNoteResponse(BaseModel):
-    note_id: UUID
+    note_id: UUID | int
     session_id: UUID
     author_name: str
     note_type: str
@@ -164,9 +181,9 @@ class ClinicianSessionView(BaseModel):
 
 class ClinicianQueueItem(BaseModel):
     session_id: UUID
-    patient_name: str
-    registration_id: str
-    appointment_number: Optional[int]
+    patient_name: Optional[str] = None
+    registration_id: Optional[str] = None
+    appointment_number: Optional[int] = None
     visit_classification: VisitClassificationInfo
     session_status: str
-    chief_complaint: Optional[str]
+    chief_complaint: Optional[str] = None

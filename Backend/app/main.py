@@ -1,8 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import intake, patient, clinician
+from app.utils.logger import setup_logging
+from app.middleware.logging import LoggingMiddleware
+
+# Initialize logging configuration (JSON)
+setup_logging()
 
 app = FastAPI(title="Nurq API")
+
+app.add_middleware(LoggingMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
