@@ -1,6 +1,8 @@
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import cast, Date
+from datetime import date
 from app.db.tables import ClinicianNoteTable, IntakeSessionTable, PatientTable
 from app.models.schemas import (
     ClinicianSessionView, 
@@ -108,13 +110,18 @@ class ClinicianRepository:
         )
 
     @staticmethod
-    async def get_queue(session: AsyncSession) -> list[ClinicianQueueItem]:
-        """Returns all active sessions today, ordered by severity then appointment number."""
+    async def get_queue(session: AsyncSession, filter_date: date | None = None) -> list[ClinicianQueueItem]:
+        """Returns sessions for a specific date (or active ones), ordered by severity then appointment number."""
         stmt = select(IntakeSessionTable, PatientTable).outerjoin(
             PatientTable, IntakeSessionTable.patient_id == PatientTable.id
-        ).where(
-            IntakeSessionTable.status == "in_progress"
-        ).order_by(
+        )
+        
+        if filter_date:
+            stmt = stmt.where(cast(IntakeSessionTable.created_at, Date) == filter_date)
+        else:
+            stmt = stmt.where(IntakeSessionTable.status == "in_progress")
+            
+        stmt = stmt.order_by(
             IntakeSessionTable.visit_classification, # We'll sort in python or write a case statement
             IntakeSessionTable.appointment_number
         )

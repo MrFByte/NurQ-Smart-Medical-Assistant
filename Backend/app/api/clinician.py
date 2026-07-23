@@ -1,5 +1,7 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from datetime import date
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -23,8 +25,11 @@ router = APIRouter(
 
 
 @router.get("/queue", response_model=list[ClinicianQueueItem])
-async def get_queue(db: AsyncSession = Depends(get_db_session)):
-    return await ClinicianRepository.get_queue(db)
+async def get_queue(
+    date: Optional[date] = Query(None, description="Filter queue by a specific date (YYYY-MM-DD)"),
+    db: AsyncSession = Depends(get_db_session)
+):
+    return await ClinicianRepository.get_queue(db, filter_date=date)
 
 
 @router.get("/session/{session_id}", response_model=ClinicianSessionView)

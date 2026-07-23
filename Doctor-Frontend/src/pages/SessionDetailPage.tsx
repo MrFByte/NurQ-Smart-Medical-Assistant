@@ -1,45 +1,65 @@
 import { useState, FormEvent } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getMockSession, addMockNote } from '../mockData'
-import { SessionDetail, SessionNote } from '../types'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchSessionDetail, addSessionNote } from '../lib/session_details_lib'
+import { SessionNote, SessionStatus } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import TopBar from '../components/TopBar'
 import {
   ArrowLeft, User, Hash, Stethoscope, BadgeCheck, Sparkles,
-  Send, MessageSquare, ShieldAlert, Loader2,
+  Send, MessageSquare, ShieldAlert, Loader2, Activity,
 } from 'lucide-react'
 
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [session, setSession] = useState<SessionDetail | null>(() =>
-    id ? getMockSession(id) : null,
-  )
-  const [error] = useState('')
+  const queryClient = useQueryClient()
+  
+  const { data: session, isLoading, isError, error } = useQuery({
+    queryKey: ['session', id],
+    queryFn: () => fetchSessionDetail(id!),
+    enabled: !!id,
+  })
+
   const [noteText, setNoteText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+
+  const mutation = useMutation({
+    mutationFn: (noteData: { content: string; author_name: string; note_type: string }) =>
+      addSessionNote(id!, noteData),
+    onSuccess: () => {
+      // Refresh the session data to show the new note
+      queryClient.invalidateQueries({ queryKey: ['session', id] })
+      setNoteText('')
+    },
+  })
 
   const handleAddNote = (e: FormEvent) => {
     e.preventDefault()
     if (!noteText.trim() || !id || !session) return
-    setSubmitting(true)
-    // Simulate async
-    setTimeout(() => {
-      const author = session.verified_by ?? 'Current Clinician'
-      const note = addMockNote(id, noteText.trim(), author)
-      setSession((prev) =>
-        prev ? { ...prev, notes: [...prev.notes, note] } : prev,
-      )
-      setNoteText('')
-      setSubmitting(false)
-    }, 300)
+    const author_name = session.patient.full_name ? session.verified_by ?? 'Current Clinician' : 'Current Clinician'
+    mutation.mutate({
+      content: noteText.trim(),
+      author_name,
+      note_type: 'observation',
+    })
   }
 
-  if (!session) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center text-slate-500">
+          <Activity className="h-8 w-8 animate-spin mb-4 text-accent-500" />
+          <p>Loading session details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glass p-8 text-center text-red-600 dark:text-danger max-w-md">
-          {error || 'Session not found'}
+          {error instanceof Error ? error.message : 'Session not found'}
           <div className="mt-4">
             <Link to="/queue" className="btn-ghost">Back to queue</Link>
           </div>
@@ -62,8 +82,8 @@ export default function SessionDetailPage() {
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="font-display text-2xl font-semibold text-slate-800 dark:text-white">{session.full_name}</h1>
-                <StatusBadge status={session.status} />
+                <h1 className="font-display text-2xl font-semibold text-slate-800 dark:text-white">{session.patient?.full_name || 'Unknown'}</h1>
+                <StatusBadge status={session.session_status as SessionStatus} />
               </div>
               <p className="text-slate-500 dark:text-slate-400 text-sm">
                 Session ID: <span className="text-slate-600 dark:text-slate-300 font-mono">{session.session_id}</span>
@@ -77,9 +97,9 @@ export default function SessionDetailPage() {
 
           {/* Info grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-            <InfoTile icon={<User className="h-4 w-4" />} label="Patient" value={session.full_name} />
-            <InfoTile icon={<Hash className="h-4 w-4" />} label="Appointment #" value={String(session.appointment_number)} />
-            <InfoTile icon={<Stethoscope className="h-4 w-4" />} label="Chief Complaint" value={session.chief_complaint} />
+            <InfoTile icon={<User className="h-4 w-4" />} label="Patient" value={session.patient?.full_name || 'Unknown'} />
+            <InfoTile icon={<Hash className="h-4 w-4" />} label="Appointment #" value={String(session.appointment_number || '--')} />
+            <InfoTile icon={<Stethoscope className="h-4 w-4" />} label="Chief Complaint" value={session.chief_complaint || '--'} />
             <InfoTile
               icon={<BadgeCheck className="h-4 w-4" />}
               label="Verified By"
@@ -94,28 +114,26 @@ export default function SessionDetailPage() {
           <h2 className="font-display text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2 mb-5">
             <MessageSquare className="h-5 w-5 text-accent-600 dark:text-accent-400" />
             Clinical Notes
-            <span className="text-sm font-normal text-slate-400">({session.notes.length})</span>
+            <span className="text-sm font-normal text-slate-400">({session.clinician_notes.length})</span>
           </h2>
 
           {/* Notes list */}
-          {session.notes.length === 0 ? (
+          {session.clinician_notes.length === 0 ? (
             <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
               No notes recorded yet. Add the first note below.
             </div>
           ) : (
             <div className="space-y-3 mb-6">
-              {session.notes.map((note: SessionNote, idx: number) => (
+              {session.clinician_notes.map((note: SessionNote, idx: number) => (
                 <div
-                  key={note.id}
+                  key={note.note_id}
                   className="rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 p-4 animate-slide-up"
                   style={{ animationDelay: `${idx * 40}ms` }}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-accent-600 dark:text-accent-400">{note.author}</span>
+                    <span className="text-sm font-medium text-accent-600 dark:text-accent-400">{note.author_name}</span>
                     <span className="text-xs text-slate-400 dark:text-slate-500">
-                      {new Date(note.created_at).toLocaleString('en-US', {
-                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                      })}
+                      Observation
                     </span>
                   </div>
                   <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{note.content}</p>
@@ -134,10 +152,10 @@ export default function SessionDetailPage() {
                 onChange={(e) => setNoteText(e.target.value)}
                 placeholder="Write your clinical observation…"
                 className="input flex-1"
-                disabled={submitting}
+                disabled={mutation.isPending}
               />
-              <button type="submit" disabled={submitting || !noteText.trim()} className="btn-primary sm:px-6">
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              <button type="submit" disabled={mutation.isPending || !noteText.trim()} className="btn-primary sm:px-6">
+                {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Add note
               </button>
             </div>

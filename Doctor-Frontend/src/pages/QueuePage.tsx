@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getMockQueue } from '../mockData'
-import { QueueItem } from '../types'
+import { useQuery } from '@tanstack/react-query'
+import { fetchQueue } from '../lib/Queue_lib'
+import { QueueItem, SessionStatus } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import TopBar from '../components/TopBar'
 import {
@@ -9,13 +10,22 @@ import {
 } from 'lucide-react'
 
 export default function QueuePage() {
-  const [queue] = useState<QueueItem[]>(() => getMockQueue())
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date()
+    return d.toISOString().split('T')[0]
+  })
+
+  const { data: queue = [], isLoading, isError, error } = useQuery({
+    queryKey: ['queue', selectedDate],
+    queryFn: () => fetchQueue(selectedDate),
+    refetchInterval: 10000, // Refresh every 10s
+  })
 
   const stats = {
     total: queue.length,
-    inProgress: queue.filter((q) => q.status === 'in_progress').length,
-    completed: queue.filter((q) => q.status === 'completed').length,
-    escalated: queue.filter((q) => q.status === 'emergency_escalated').length,
+    inProgress: queue.filter((q) => q.session_status === 'in_progress').length,
+    completed: queue.filter((q) => q.session_status === 'completed').length,
+    escalated: queue.filter((q) => q.session_status === 'emergency_escalated').length,
   }
 
   return (
@@ -25,11 +35,20 @@ export default function QueuePage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="font-display text-3xl font-semibold text-slate-800 dark:text-white">Today's Queue</h1>
+            <h1 className="font-display text-3xl font-semibold text-slate-800 dark:text-white">Clinical Queue</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-2 text-sm">
               <Clock className="h-4 w-4" />
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })}
             </p>
+          </div>
+          <div className="flex items-center gap-3 bg-white/50 dark:bg-white/[0.02] p-2 rounded-xl border border-slate-200 dark:border-white/10">
+            <label className="text-sm font-medium text-slate-600 dark:text-slate-300 ml-2">Date:</label>
+            <input 
+              type="date" 
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="input text-sm py-1.5 bg-transparent border-0 ring-0 focus:ring-0"
+            />
           </div>
         </div>
 
@@ -42,12 +61,29 @@ export default function QueuePage() {
         </div>
 
         {/* Table */}
-        <div className="glass overflow-hidden">
-          {/* Header row */}
-          <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-200 dark:border-white/10 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-400 font-semibold">
+        <div className="glass overflow-hidden min-h-[300px]">
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+              <Activity className="h-8 w-8 animate-spin mb-4 text-accent-500" />
+              <p>Loading queue...</p>
+            </div>
+          )}
+
+          {isError && (
+            <div className="flex flex-col items-center justify-center h-64 text-red-500">
+              <AlertTriangle className="h-8 w-8 mb-4" />
+              <p>Error loading queue: {error instanceof Error ? error.message : 'Unknown error'}</p>
+            </div>
+          )}
+
+          {!isLoading && !isError && (
+            <>
+              {/* Header row */}
+              <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-200 dark:border-white/10 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-400 font-semibold">
             <div className="col-span-1">#</div>
-            <div className="col-span-3">Patient</div>
-            <div className="col-span-4">Chief Complaint</div>
+            <div className="col-span-2">Reg ID</div>
+            <div className="col-span-2">Patient</div>
+            <div className="col-span-3">Chief Complaint</div>
             <div className="col-span-2">Status</div>
             <div className="col-span-2 text-right">Action</div>
           </div>
@@ -68,22 +104,27 @@ export default function QueuePage() {
                   </span>
                 </div>
 
+                {/* Reg ID */}
+                <div className="md:col-span-2 flex items-center text-sm font-mono text-slate-500 dark:text-slate-400">
+                  {item.registration_id}
+                </div>
+
                 {/* Patient name */}
-                <div className="md:col-span-3">
+                <div className="md:col-span-2">
                   <div className="font-medium text-slate-800 dark:text-white group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">
-                    {item.full_name}
+                    {item.patient_name || 'Unknown Patient'}
                   </div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 md:hidden mt-1">{item.chief_complaint}</div>
                 </div>
 
                 {/* Chief complaint */}
-                <div className="md:col-span-4 text-sm text-slate-600 dark:text-slate-300 hidden md:block">
+                <div className="md:col-span-3 text-sm text-slate-600 dark:text-slate-300 hidden md:block">
                   {item.chief_complaint}
                 </div>
 
                 {/* Status */}
                 <div className="md:col-span-2">
-                  <StatusBadge status={item.status} />
+                  <StatusBadge status={item.session_status as SessionStatus} />
                 </div>
 
                 {/* Action */}
@@ -94,8 +135,10 @@ export default function QueuePage() {
                   </span>
                 </div>
               </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+            </>
+          )}
         </div>
       </main>
     </div>

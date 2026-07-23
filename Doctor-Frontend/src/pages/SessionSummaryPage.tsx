@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getMockSummary } from '../mockData'
+import { useQuery } from '@tanstack/react-query'
+import { fetchSessionSummary } from '../lib/session_summary_lib'
 import { SessionSummary } from '../types'
 import TopBar from '../components/TopBar'
 import { ArrowLeft, Sparkles, Flag, Table2, FileText } from 'lucide-react'
@@ -8,15 +9,28 @@ import { ArrowLeft, Sparkles, Flag, Table2, FileText } from 'lucide-react'
 export default function SessionSummaryPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [summary] = useState<SessionSummary | null>(() =>
-    id ? getMockSummary(id) : null,
-  )
 
-  if (!summary) {
+  const { data: summary, isLoading, isError, error } = useQuery({
+    queryKey: ['session_summary', id],
+    queryFn: () => fetchSessionSummary(id!),
+    enabled: !!id,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center text-slate-500">
+          <p>Loading AI Summary...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError || !summary) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glass p-8 text-center text-red-600 dark:text-danger max-w-md">
-          Summary not found
+          {error instanceof Error ? error.message : 'Summary not found'}
           <div className="mt-4">
             <button onClick={() => navigate(`/session/${id}`)} className="btn-ghost">Back to session</button>
           </div>
@@ -25,7 +39,10 @@ export default function SessionSummaryPage() {
     )
   }
 
-  const structuredEntries = Object.entries(summary.structured_data)
+  // Safely get entries or empty array if structured_data is not an object or is missing
+  const structuredEntries = summary.structured_data && typeof summary.structured_data === 'object' 
+    ? Object.entries(summary.structured_data) 
+    : []
 
   return (
     <div className="min-h-screen">
