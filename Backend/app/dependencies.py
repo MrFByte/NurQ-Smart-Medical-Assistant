@@ -22,6 +22,8 @@ from app.providers.groq_provider import GroqProvider
 from app.providers.tts_provider import EdgeTTSProvider
 from app.services.state_machine import IntakeStateMachine
 from app.services.orchestrator import IntakeOrchestrator
+from app.db.cache_repository import CacheRepository
+from app.db.redis_client import get_redis
 
 def get_groq_provider() -> GroqProvider:
     return GroqProvider()
@@ -38,9 +40,13 @@ def get_tts() -> TTSProvider:
 def get_state_machine() -> IntakeStateMachine:
     return IntakeStateMachine()
 
+def get_cache_repo() -> CacheRepository:
+    return CacheRepository(get_redis())
+
 def get_orchestrator(
     repo: SessionRepository = Depends(get_repo),
+    cache_repo: CacheRepository = Depends(get_cache_repo),
     llm: LLMProvider = Depends(get_llm),
     sm: IntakeStateMachine = Depends(get_state_machine)
 ) -> IntakeOrchestrator:
-    return IntakeOrchestrator(repo, llm, sm)
+    return IntakeOrchestrator(repo, cache_repo, llm, sm)

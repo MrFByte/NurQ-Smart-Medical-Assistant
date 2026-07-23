@@ -1,5 +1,6 @@
 import React from 'react';
-import { AlertTriangle, Phone, ArrowRight, HeartPulse } from 'lucide-react';
+import { AlertTriangle, Phone, ArrowRight } from 'lucide-react';
+import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
 import { useNavigate } from 'react-router-dom';
 import { EMERGENCY_COPY, getEmergencyNumbers } from './emergency.lib';
 import { Button } from '../../components/Button';
@@ -15,7 +16,7 @@ export const EmergencyPage: React.FC = () => {
       <div className="min-h-screen bg-red-600 flex flex-col">
         <header className="max-w-2xl mx-auto w-full px-5 pt-8 flex justify-center">
           <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
-            <HeartPulse size={18} className="text-white" />
+            <img src={nurqLogo} alt="Nurq icon" width={32} height={32} />
             <span className="text-xl font-black text-white">Nurq</span>
           </div>
         </header>

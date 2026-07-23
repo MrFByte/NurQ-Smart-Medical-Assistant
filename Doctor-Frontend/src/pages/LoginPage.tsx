@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { mockLogin } from '../mockData'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { Activity, Lock, User, Loader2, AlertCircle, Moon, Sun } from 'lucide-react'
+import { Lock, User, Loader2, AlertCircle, Moon, Sun } from 'lucide-react'
+import doctorIcon from '../assets/nurq-doctor-icon.svg'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -43,8 +44,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Brand */}
         <div className="flex flex-col items-center mb-8">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center shadow-[0_0_40px_rgba(34,211,238,0.30)] dark:shadow-[0_0_40px_rgba(34,211,238,0.35)] mb-4">
-            <Activity className="h-8 w-8 text-white" strokeWidth={2.5} />
+          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center shadow-[0_0_40px_rgba(34,211,238,0.30)] dark:shadow-[0_0_40px_rgba(34,211,238,0.35)] mb-4 overflow-hidden">
+            <img src={doctorIcon} alt="Nurq Logo" className="h-full w-full object-cover" />
           </div>
           <h1 className="font-display text-2xl font-semibold text-slate-800 dark:text-white">NurQ</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Clinician Console — Sign in to continue</p>

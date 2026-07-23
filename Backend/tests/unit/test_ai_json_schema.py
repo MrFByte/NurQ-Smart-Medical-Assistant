@@ -89,3 +89,12 @@ def test_invalid_disability_type():
 def test_invalid_medical_finding_type():
     with pytest.raises(ValidationError):
         session = IntakeSession(medical_findings=[{"finding_type": "invalid", "description": "foo"}])
+
+def test_confidence_normalization():
+    from app.providers.protocols import ExtractedFieldUpdate
+    
+    field1 = ExtractedFieldUpdate(value="test", confidence="CONFIRMED")
+    assert field1.confidence == "confirmed"
+
+    field2 = ExtractedFieldUpdate(value="test", confidence="  pArTiaL  ")
+    assert field2.confidence == "partial"

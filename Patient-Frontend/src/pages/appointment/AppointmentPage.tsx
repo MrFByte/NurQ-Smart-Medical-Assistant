@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Ticket, UserCircle, Clock, HeartPulse } from 'lucide-react';
+import { ArrowRight, Ticket, UserCircle, Clock } from 'lucide-react';
+import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
 import { formatAppointmentNumber, getWaitMessage, INTAKE_PROMPT } from './appointment.lib';
 import { useIntakeContext } from '../../context/IntakeContext';
 import { Button } from '../../components/Button';
@@ -22,9 +23,7 @@ export const AppointmentPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-blue-50/40 flex flex-col">
         <header className="max-w-2xl mx-auto w-full px-5 pt-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-md shadow-blue-200">
-              <HeartPulse size={18} className="text-white" />
-            </div>
+            <img src={nurqLogo} alt="Nurq icon" width={40} height={40} />
             <span className="text-xl font-black text-gray-900">Nurq</span>
           </div>
           {registrationId && (
@@ -59,7 +58,7 @@ export const AppointmentPage: React.FC = () => {
             <Card className="!p-8 group hover:!border-blue-200" hoverable>
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
-                  <HeartPulse size={24} className="text-blue-600" />
+                  <img src={nurqLogo} alt="Nurq icon" width={28} height={28} />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">{INTAKE_PROMPT.heading}</h3>

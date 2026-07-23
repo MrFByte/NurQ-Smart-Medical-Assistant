@@ -48,10 +48,17 @@ export interface SendMessageRequest {
   content: string;
 }
 
+export interface ChatTurn {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface SendMessageResponse {
   assistant_message: string;
   session_status: 'in_progress' | 'completed' | 'emergency_escalated';
   updated_fields: string[];
+  audio_url?: string | null;  // base64 MP3 data URI returned by /audio-message endpoint
 }
 
 export interface RegisterPatientRequest {

@@ -2,8 +2,8 @@ export const LANDING_COPY = {
   badge: 'Smart Medical Intake',
   headlineStart: 'Healthcare',
   headlineEnd: 'meets intelligence',
-  subtext: 'Nurq guides you through a warm, intelligent intake process — describe your symptoms, get triaged instantly, and receive your appointment token in minutes.',
-  about: 'Nurq is an intelligent medical intake assistant that transforms how patients enter the healthcare system. Instead of filling out lengthy paper forms in a waiting room, you simply describe what\'s bothering you — by typing or talking — and Nurq handles the rest.',
+  subtext: 'Nurq guides you through a warm, intelligent intake process - describe your symptoms, get triaged instantly, and receive your appointment token in minutes.',
+  about: 'Nurq is an intelligent medical intake assistant that transforms how patients enter the healthcare system. Instead of filling out lengthy paper forms in a waiting room, you simply describe what\'s bothering you by typing or talking and Nurq handles the rest.',
 };
 
 export const STATS = [
@@ -21,7 +21,7 @@ export const FEATURES = [
 
 export const HOW_IT_WORKS = [
   { step: '01', title: 'Register', desc: 'New patients share basic info. Returning patients look up their ID.' },
-  { step: '02', title: 'Describe', desc: 'Tell Nurq what\'s wrong — by text or voice, in your own words.' },
+  { step: '02', title: 'Describe', desc: 'Tell Nurq what\'s wrong: by text or voice, in your own words.' },
   { step: '03', title: 'Get token', desc: 'Receive your appointment number instantly after triage.' },
   { step: '04', title: 'Share history', desc: 'Optionally complete your medical history with our assistant.' },
 ];

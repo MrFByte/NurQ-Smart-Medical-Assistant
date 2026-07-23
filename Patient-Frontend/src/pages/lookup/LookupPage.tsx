@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowRight, Search, Hash, Phone, HeartPulse } from 'lucide-react';
+import { ArrowRight, Search, Hash, Phone } from 'lucide-react';
+import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
 import { LOOKUP_COPY, normalizeRegistrationId, normalizePhone, validateLookupInput } from './lookup.lib';
 import { useLookupPatient } from '../../hooks/useLookupPatient';
 import { Input } from '../../components/Input';
@@ -35,9 +36,7 @@ export const LookupPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-blue-50/40 flex flex-col">
         <header className="max-w-2xl mx-auto w-full px-5 pt-8">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-md shadow-blue-200">
-              <HeartPulse size={18} className="text-white" />
-            </div>
+            <img src={nurqLogo} alt="Nurq icon" width={40} height={40} />
             <span className="text-xl font-black text-gray-900">Nurq</span>
           </div>
         </header>

@@ -6,8 +6,10 @@ from typing import Optional
 from app.models.domain import ConversationTurn, IntakeSession
 from app.models.schemas import SendMessageResponse
 from app.db.repository import SessionRepository
+from app.db.cache_repository import CacheRepository
 from app.providers.protocols import LLMProvider
 from app.services.state_machine import IntakeStateMachine
+from app.services.background_writer import schedule_db_write
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +17,12 @@ class IntakeOrchestrator:
     def __init__(
         self,
         repo: SessionRepository,
+        cache_repo: CacheRepository,
         llm: LLMProvider,
         state_machine: IntakeStateMachine,
     ):
         self.repo = repo
+        self.cache_repo = cache_repo
         self.llm = llm
         self.state_machine = state_machine
 
@@ -26,9 +30,12 @@ class IntakeOrchestrator:
         self, session_id: uuid.UUID, content: str
     ) -> SendMessageResponse:
         
-        session = await self.repo.get_session(session_id)
+        session = await self.cache_repo.get_cached_session(session_id)
         if not session:
-            raise ValueError(f"Session {session_id} not found")
+            session = await self.repo.get_session(session_id)
+            if not session:
+                raise ValueError(f"Session {session_id} not found")
+            await self.cache_repo.cache_session(session)
 
         # Generate message ID server-side
         message_id = uuid.uuid4()
@@ -39,12 +46,15 @@ class IntakeOrchestrator:
         history = [{"role": t.role, "content": t.content} for t in session.conversation_log[-6:-1]]
         schema_state = session.model_dump(mode="json")
         
-        emergency_task = self.llm.detect_emergency(content, history)
-        extraction_task = self.llm.extract_fields(content, schema_state, history)
+        # Note: We need the current target group to pass its label to extract_fields.
+        # However, at this point, the user's message is answering the *previous* turn's question.
+        # We need to figure out what group they were likely answering.
+        # Let's get the target before applying extraction to give extraction context.
+        current_target_group = self.state_machine.next_target_group(session)
+        group_label = current_target_group.label if current_target_group else None
         
-        emergency_result, extraction_result = await asyncio.gather(emergency_task, extraction_task)
+        extraction_result = await self.llm.extract_fields(content, schema_state, history, group_label=group_label)
         user_turn.extraction_result = extraction_result.model_dump(mode="json")
-        await self.repo.append_turn(session_id, user_turn)
         
         # --- Classification Upgrade Logic ---
         from app.utils.classification import (
@@ -60,7 +70,7 @@ class IntakeOrchestrator:
             t.get("content", "").lower() for t in history
         )
         validated_keywords = [
-            kw for kw in emergency_result.triggered_keywords
+            kw for kw in extraction_result.triggered_keywords
             if kw.lower() in KEYWORD_TO_CLASSIFICATION  # must be a known red-flag
             and kw.lower() in conversation_text          # must actually appear in the conversation
         ]
@@ -77,7 +87,7 @@ class IntakeOrchestrator:
             session.status = "emergency_escalated"
             session.emergency.is_emergency = True
             session.emergency.triggered_keywords = validated_keywords
-            session.emergency.recommended_action = emergency_result.recommended_action
+            session.emergency.recommended_action = extraction_result.recommended_action
             session.emergency.triggered_at_turn = message_id
             
             safety_msg = (
@@ -88,8 +98,13 @@ class IntakeOrchestrator:
             assistant_turn = ConversationTurn(role="assistant", content=safety_msg)
             session.conversation_log.append(assistant_turn)
             
-            await self.repo.update_session(session)
-            await self.repo.append_turn(session_id, assistant_turn)
+            # Redis updates
+            await self.cache_repo.cache_session(session)
+            await self.cache_repo.append_cached_turn(session_id, user_turn)
+            await self.cache_repo.append_cached_turn(session_id, assistant_turn)
+            
+            # Background Postgres write
+            schedule_db_write(session, [user_turn, assistant_turn])
             
             return SendMessageResponse(
                 message_id=message_id,
@@ -99,16 +114,35 @@ class IntakeOrchestrator:
                 updated_fields=[],
                 emergency_alert=EmergencyAlert(
                     message="Based on what you've described, this may be a life-threatening emergency. Please contact emergency services immediately.",
-                    emergency_contacts=get_emergency_contacts(emergency_result.triggered_keywords)
+                    emergency_contacts=get_emergency_contacts(extraction_result.triggered_keywords)
                 )
             )
             
         updated_fields = self._apply_extraction(session, extraction_result.fields)
         
-        target = self.state_machine.next_target(session)
-        if not target:
+        target_group = self.state_machine.next_target_group(session)
+        if not target_group:
             session.status = "completed"
-            await self.repo.update_session(session)
+            
+            await self.cache_repo.cache_session(session)
+            await self.cache_repo.append_cached_turn(session_id, user_turn)
+            
+            schedule_db_write(session, [user_turn])
+            
+            return SendMessageResponse(
+                message_id=message_id,
+                assistant_message="Thank you, I have all the information I need.",
+                session_status=session.status,
+                updated_fields=updated_fields
+            )
+
+        # 4. Session-wide hard cap (>14 asks)
+        if sum(session.ask_counts.values()) > 14:
+            logger.info(f"Session {session_id} reached 14 total asks, auto-completing.")
+            session.status = "completed"
+            await self.cache_repo.cache_session(session)
+            await self.cache_repo.append_cached_turn(session_id, user_turn)
+            schedule_db_write(session, [user_turn])
             return SendMessageResponse(
                 message_id=message_id,
                 assistant_message="Thank you, I have all the information I need.",
@@ -116,13 +150,42 @@ class IntakeOrchestrator:
                 updated_fields=updated_fields
             )
             
-        next_q = await self.llm.generate_question(target.path, target.label, history + [{"role": "user", "content": content}])
+        remaining_groups = self.state_machine.count_remaining_groups(session)
+        session.ask_counts[target_group.id] = session.ask_counts.get(target_group.id, 0) + 1
+        max_asks = self._max_asks_for_group(session, remaining_groups)
+        
+        if session.ask_counts[target_group.id] >= max_asks:
+            self._force_confirm_group(session, target_group)
+            target_group = self.state_machine.next_target_group(session)
+            if not target_group:
+                session.status = "completed"
+                
+                await self.cache_repo.cache_session(session)
+                await self.cache_repo.append_cached_turn(session_id, user_turn)
+                
+                schedule_db_write(session, [user_turn])
+                
+                return SendMessageResponse(
+                    message_id=message_id,
+                    assistant_message="Thank you, I have all the information I need.",
+                    session_status=session.status,
+                    updated_fields=updated_fields
+                )
+
+        known_context = self._summarize_group_known_values(session, target_group)
+            
+        next_q = await self.llm.generate_question(
+            target_group.label, known_context, history + [{"role": "user", "content": content}]
+        )
         
         assistant_turn = ConversationTurn(role="assistant", content=next_q)
         session.conversation_log.append(assistant_turn)
         
-        await self.repo.update_session(session)
-        await self.repo.append_turn(session_id, assistant_turn)
+        await self.cache_repo.cache_session(session)
+        await self.cache_repo.append_cached_turn(session_id, user_turn)
+        await self.cache_repo.append_cached_turn(session_id, assistant_turn)
+        
+        schedule_db_write(session, [user_turn, assistant_turn])
         
         return SendMessageResponse(
             message_id=message_id,
@@ -130,6 +193,66 @@ class IntakeOrchestrator:
             session_status=session.status,
             updated_fields=updated_fields
         )
+
+    def _max_asks_for_group(self, session: IntakeSession, remaining_group_count: int) -> int:
+        """Ration remaining question budget fairly across remaining groups."""
+        total_asked = sum(session.ask_counts.values())
+        remaining_budget = max(14 - total_asked, 0)
+        if remaining_group_count <= 0:
+            return 1
+        # Reserve at least 1 question for every other remaining group
+        fair_share = remaining_budget - (remaining_group_count - 1)
+        return max(1, min(2, fair_share))
+
+    def _get_field(self, session: IntakeSession, path: str):
+        """Resolve a dotted field path on the session."""
+        parts = path.split('.')
+        current = session
+        for part in parts:
+            if hasattr(current, part):
+                current = getattr(current, part)
+            else:
+                return None
+        return current
+
+    def _force_confirm_group(self, session: IntakeSession, group) -> None:
+        """Force-confirm all field paths in a group."""
+        for path in group.field_paths:
+            self._force_confirm(session, path)
+
+    def _summarize_group_known_values(self, session: IntakeSession, group) -> str | None:
+        """Returns a string summarizing what's already known about the group's fields."""
+        known_parts = []
+        for path in group.field_paths:
+            field = self._get_field(session, path)
+            if field is None:
+                continue
+                
+            # Handle primitive ExtractedField
+            if hasattr(field, "value") and field.value:
+                key = path.split('.')[-1]
+                known_parts.append(f"{key}: {field.value}")
+            # Handle list models (medications, allergies)
+            elif isinstance(field, list) and len(field) > 0:
+                key = path.split('.')[-1]
+                # Just stringify the models
+                items = [str(item.model_dump(exclude_none=True)) for item in field]
+                known_parts.append(f"{key}: {'; '.join(items)}")
+                
+        if not known_parts:
+            return None
+        return "; ".join(known_parts)
+
+    def _force_confirm(self, session: IntakeSession, path: str) -> None:
+        """After repeated asks, accept the best-known value rather than looping forever."""
+        from app.models.domain import FieldConfidence
+        field = self._get_field(session, path)
+        if field is not None and hasattr(field, "confidence"):
+            if field.value:
+                field.confidence = FieldConfidence.CONFIRMED
+            else:
+                field.confidence = FieldConfidence.SKIPPED
+            logger.info(f"Force-confirmed field {path} after repeated asks")
 
     def _apply_extraction(self, session: IntakeSession, fields: dict) -> list[str]:
         updated = []

@@ -23,12 +23,13 @@ from app.db.tables import Base
 from app.providers.protocols import (
     LLMProvider,
     ExtractionResult,
-    EmergencyResult,
     SummaryResult,
 )
 from app.services.orchestrator import IntakeOrchestrator
 from app.services.state_machine import IntakeStateMachine
 from app.db.repository import SessionRepository
+from app.db.cache_repository import CacheRepository
+from app.dependencies import get_cache_repo
 
 # ---------------------------------------------------------------------------
 # In-memory SQLite engine used by ALL tests
@@ -118,10 +119,23 @@ async def async_client(db_session):
 
     def _override_repo():
         return SessionRepository(db_session)
+        
+    class MockCacheRepo:
+        async def cache_session(self, session): pass
+        async def get_cached_session(self, session_id): return None
+        async def append_cached_turn(self, session_id, turn): pass
+        async def get_cached_turns(self, session_id): return None
+        async def invalidate_session(self, session_id): pass
+
+    mock_cache = MockCacheRepo()
+
+    def _override_cache_repo():
+        return mock_cache
 
     def _override_orchestrator():
         return IntakeOrchestrator(
             SessionRepository(db_session),
+            mock_cache,
             _mock_llm,
             IntakeStateMachine(),
         )
@@ -129,6 +143,7 @@ async def async_client(db_session):
     app.dependency_overrides[get_db_session] = _override_db
     app.dependency_overrides[get_llm] = _override_llm
     app.dependency_overrides[get_repo] = _override_repo
+    app.dependency_overrides[get_cache_repo] = _override_cache_repo
     app.dependency_overrides[get_orchestrator] = _override_orchestrator
 
     transport = ASGITransport(app=app)

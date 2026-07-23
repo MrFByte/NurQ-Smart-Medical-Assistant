@@ -5,7 +5,9 @@ export const API = {
     lookupByPhone: { method: 'POST', path: '/patient/lookup-by-phone' },
   },
   intake: {
-    createSession: { method: 'POST', path: '/intake/session' },
-    sendMessage:   { method: 'POST', path: '/intake/session/:id/message' },
+    createSession:    { method: 'POST', path: '/intake/session' },
+    sendMessage:      { method: 'POST', path: '/intake/session/:id/message' },
+    sendAudioMessage: { method: 'POST', path: '/intake/session/:id/audio-message' },
+    getHistory:       { method: 'GET',  path: '/intake/session/:id/history' },
   },
 } as const;

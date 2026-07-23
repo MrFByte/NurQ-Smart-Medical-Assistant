@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Activity, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
+import doctorIcon from '../assets/nurq-doctor-icon.svg'
 
 export default function TopBar() {
   const { logout } = useAuth()
@@ -16,8 +17,8 @@ export default function TopBar() {
     <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 dark:bg-ink-950/70 border-b border-slate-200 dark:border-white/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <Link to="/queue" className="flex items-center gap-2.5 group">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.25)] dark:shadow-[0_0_20px_rgba(34,211,238,0.30)] group-hover:shadow-[0_0_28px_rgba(34,211,238,0.40)] transition-shadow">
-            <Activity className="h-5 w-5 text-white" strokeWidth={2.5} />
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.25)] dark:shadow-[0_0_20px_rgba(34,211,238,0.30)] group-hover:shadow-[0_0_28px_rgba(34,211,238,0.40)] transition-shadow overflow-hidden">
+            <img src={doctorIcon} alt="Nurq Logo" className="h-full w-full object-cover" />
           </div>
           <div className="leading-tight">
             <div className="font-display font-semibold text-base text-slate-800 dark:text-white">NurQ</div>

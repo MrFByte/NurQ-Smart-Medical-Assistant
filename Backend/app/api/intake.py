@@ -19,7 +19,8 @@ from sqlalchemy.future import select
 
 from app.services.orchestrator import IntakeOrchestrator
 from app.providers.protocols import LLMProvider, STTProvider, TTSProvider
-from app.dependencies import get_repo, get_orchestrator, get_llm, get_stt, get_tts
+from app.dependencies import get_repo, get_cache_repo, get_orchestrator, get_llm, get_stt, get_tts
+from app.db.cache_repository import CacheRepository
 from app.utils.classification import determine_classification_from_keywords
 
 router = APIRouter(prefix="/intake", tags=["intake"])
@@ -148,3 +149,24 @@ async def get_summary(
         flags_for_review=summary_result.flags,
         structured_data=session_data
     )
+
+@router.get("/session/{session_id}/history")
+async def get_history(
+    session_id: uuid.UUID,
+    cache_repo: CacheRepository = Depends(get_cache_repo),
+    repo: SessionRepository = Depends(get_repo)
+):
+    turns = await cache_repo.get_cached_turns(session_id)
+    if not turns:
+        # Fallback: load from Postgres
+        session = await repo.get_session(session_id)
+        if session:
+            turns = session.conversation_log
+            # Backfill cache
+            for turn in turns:
+                await cache_repo.append_cached_turn(session_id, turn)
+        else:
+            turns = []
+            
+    return {"turns": [{"role": t.role, "content": t.content, "id": str(t.id)} for t in turns]}
+

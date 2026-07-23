@@ -1,5 +1,5 @@
 from typing import Protocol, Optional, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from app.models.domain import FieldConfidence
 
 class ExtractedFieldUpdate(BaseModel):
@@ -7,13 +7,17 @@ class ExtractedFieldUpdate(BaseModel):
     confidence: FieldConfidence
     raw_quote: str | None = None
 
-class ExtractionResult(BaseModel):
-    fields: dict[str, ExtractedFieldUpdate]
-    raw_response: str = ""
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def normalize_confidence(cls, v):
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
 
-class EmergencyResult(BaseModel):
-    is_emergency: bool
-    triggered_keywords: list[str]
+class ExtractionResult(BaseModel):
+    fields: dict[str, ExtractedFieldUpdate] = {}
+    is_emergency: bool = False
+    triggered_keywords: list[str] = []
     recommended_action: Optional[str] = None
     raw_response: str = ""
 
@@ -28,15 +32,12 @@ class LLMProvider(Protocol):
     you need different providers per role."""
 
     async def extract_fields(
-        self, user_message: str, schema_state: dict, conversation: list[dict]
+        self, user_message: str, schema_state: dict, conversation: list[dict],
+        group_label: str | None = None
     ) -> ExtractionResult: ...
 
-    async def detect_emergency(
-        self, user_message: str, conversation: list[dict]
-    ) -> EmergencyResult: ...
-
     async def generate_question(
-        self, target_field: str, field_label: str, conversation: list[dict]
+        self, group_label: str, known_context: str | None, conversation: list[dict]
     ) -> str: ...
 
     async def generate_summary(

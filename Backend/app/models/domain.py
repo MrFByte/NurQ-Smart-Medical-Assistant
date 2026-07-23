@@ -84,6 +84,8 @@ class Medication(BaseModel):
     dosage: Optional[str] = None
     frequency: Optional[str] = None
     is_currently_taking: bool = True
+    last_taken: Optional[str] = None
+    purpose: Optional[str] = None
 
 
 class Allergy(BaseModel):
@@ -185,6 +187,7 @@ class IntakeSession(BaseModel):
 
     verification: VerificationStatus = Field(default_factory=VerificationStatus)
     conversation_log: list[ConversationTurn] = Field(default_factory=list)
+    ask_counts: dict[str, int] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
