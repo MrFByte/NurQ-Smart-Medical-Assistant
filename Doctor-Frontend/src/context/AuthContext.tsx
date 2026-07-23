@@ -1,32 +1,54 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { Session } from '@supabase/supabase-js'
+import { supabase } from '../lib/supabase'
 
 interface AuthContextValue {
+  session: Session | null
   token: string | null
-  login: (token: string) => void
-  logout: () => void
+  logout: () => Promise<void>
   isAuthenticated: boolean
+  isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-const STORAGE_KEY = 'nurq.token'
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem(STORAGE_KEY),
-  )
+  const [session, setSession] = useState<Session | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (token) localStorage.setItem(STORAGE_KEY, token)
-    else localStorage.removeItem(STORAGE_KEY)
-  }, [token])
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setIsLoading(false)
+    })
 
-  const login = (t: string) => setToken(t)
-  const logout = () => setToken(null)
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      setIsLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const logout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  const value = {
+    session,
+    token: session?.access_token ?? null,
+    logout,
+    isAuthenticated: !!session,
+    isLoading
+  }
 
   return (
-    <AuthContext.Provider value={{ token, login, logout, isAuthenticated: !!token }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!isLoading && children}
     </AuthContext.Provider>
   )
 }

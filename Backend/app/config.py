@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     db_write_retry_base_seconds: float = 1.0
 
     GROQ_API_KEY: str
+    SUPABASE_URL: str
 
     # Model names — change these to swap providers
     extraction_model: str = "llama-3.1-8b-instant"

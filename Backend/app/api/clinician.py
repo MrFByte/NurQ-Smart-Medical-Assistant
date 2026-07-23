@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.dependencies import get_db_session, get_llm
+from app.dependencies import get_db_session, get_llm, verify_supabase_token
 from app.providers.protocols import LLMProvider
 from app.db.clinician_repository import ClinicianRepository
 from app.db.tables import IntakeSessionTable
@@ -15,7 +15,11 @@ from app.models.schemas import (
     SummaryResponse
 )
 
-router = APIRouter(prefix="/clinician", tags=["Clinician Dashboard"])
+router = APIRouter(
+    prefix="/clinician", 
+    tags=["Clinician Dashboard"],
+    dependencies=[Depends(verify_supabase_token)]
+)
 
 
 @router.get("/queue", response_model=list[ClinicianQueueItem])

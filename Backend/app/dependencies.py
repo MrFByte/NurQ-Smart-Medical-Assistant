@@ -1,6 +1,7 @@
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.config import settings, Settings
 from app.db.engine import async_session_maker
@@ -50,3 +51,21 @@ def get_orchestrator(
     sm: IntakeStateMachine = Depends(get_state_machine)
 ) -> IntakeOrchestrator:
     return IntakeOrchestrator(repo, cache_repo, llm, sm)
+
+security = HTTPBearer()
+
+async def verify_supabase_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Verify that the provided token is a valid Supabase JWT."""
+    from app.utils.auth import SupabaseAuth
+    try:
+        payload = await SupabaseAuth.verify_token(credentials.credentials)
+        return payload
+    except Exception as e:
+        # Re-raise HTTPExceptions thrown by verify_token
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid authentication credentials: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
