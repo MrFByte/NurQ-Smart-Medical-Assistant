@@ -11,8 +11,8 @@ async def test_groq_llm_connection():
     try:
         # A simple generation request to verify API keys and network connectivity
         question = await provider.generate_question(
-            target_field="test",
-            field_label="connection test",
+            group_label="connection test",
+            known_context="test context",
             conversation=[]
         )
         assert isinstance(question, str)

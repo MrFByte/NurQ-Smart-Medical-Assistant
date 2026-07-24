@@ -39,7 +39,7 @@ async def create_session(
         )
     
     # 1. Triage the chief complaint
-    emergency_result = await llm.detect_emergency(request.chief_complaint_text, [])
+    emergency_result = await llm.extract_fields(request.chief_complaint_text, {}, [])
     classification = determine_classification_from_keywords(emergency_result.triggered_keywords)
     
     # 2. Handle CRITICAL cases immediately (no session created)

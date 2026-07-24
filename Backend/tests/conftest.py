@@ -45,21 +45,10 @@ TestingSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit
 class MockLLMProvider(LLMProvider):
     """Deterministic LLM mock used across integration & regression tests."""
 
-    async def extract_fields(self, user_message, schema_state, conversation):
+    async def extract_fields(self, user_message, schema_state, conversation, group_label=None):
         from app.providers.protocols import ExtractedFieldUpdate
         from app.models.domain import FieldConfidence
 
-        if "chest pain" in user_message.lower():
-            return ExtractionResult(fields={
-                "chief_complaint.summary": ExtractedFieldUpdate(
-                    value="Chest Pain",
-                    confidence=FieldConfidence.CONFIRMED,
-                    raw_quote="chest pain",
-                )
-            })
-        return ExtractionResult(fields={})
-
-    async def detect_emergency(self, user_message, conversation):
         keywords = []
         is_emergency = False
         lower = user_message.lower()
@@ -73,14 +62,25 @@ class MockLLMProvider(LLMProvider):
                 keywords.append(term)
                 is_emergency = True
 
-        return EmergencyResult(
+        fields = {}
+        if "chest pain" in lower:
+            fields["chief_complaint.summary"] = ExtractedFieldUpdate(
+                value="Chest Pain",
+                confidence=FieldConfidence.CONFIRMED,
+                raw_quote="chest pain",
+            )
+            keywords.append("chest pain")
+            is_emergency = True
+
+        return ExtractionResult(
+            fields=fields,
             is_emergency=is_emergency,
             triggered_keywords=keywords,
             recommended_action="Go to ER" if is_emergency else None,
         )
 
-    async def generate_question(self, target_field, field_label, conversation):
-        return f"Mocked question about {field_label}?"
+    async def generate_question(self, group_label, known_context, conversation):
+        return f"Mocked question about {group_label}?"
 
     async def generate_summary(self, session_data):
         return SummaryResult(clinician_summary="Mocked summary", flags=[])
@@ -140,11 +140,16 @@ async def async_client(db_session):
             IntakeStateMachine(),
         )
 
+    from app.dependencies import verify_supabase_token
+    def _override_verify_token():
+        return {"sub": "mock-clinician"}
+
     app.dependency_overrides[get_db_session] = _override_db
     app.dependency_overrides[get_llm] = _override_llm
     app.dependency_overrides[get_repo] = _override_repo
     app.dependency_overrides[get_cache_repo] = _override_cache_repo
     app.dependency_overrides[get_orchestrator] = _override_orchestrator
+    app.dependency_overrides[verify_supabase_token] = _override_verify_token
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
