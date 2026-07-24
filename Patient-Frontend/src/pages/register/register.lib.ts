@@ -1,4 +1,4 @@
-import { RegisterPatientRequest } from '../../api/types';
+import { RegisterPatientRequest } from '@/api/types';
 
 export const REGISTER_COPY = {
   heading: 'Patient Registration',

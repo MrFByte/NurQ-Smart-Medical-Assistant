@@ -1,4 +1,4 @@
-import { SendMessageRequest } from '../../api/types';
+import { SendMessageRequest } from '@/api/types';
 
 export const INTAKE_COPY = {
   header: 'Nurq Health Assistant',

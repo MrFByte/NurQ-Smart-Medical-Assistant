@@ -1,4 +1,4 @@
-import { CreateSessionRequest } from '../../api/types';
+import { CreateSessionRequest } from '@/api/types';
 
 export const COMPLAINT_COPY = {
   heading: 'Reason for Visit',

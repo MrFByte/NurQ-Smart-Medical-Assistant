@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Ticket, UserCircle, Clock } from 'lucide-react';
-import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
+import nurqLogo from '@/assets/illustrations/nurq-patient-icon.svg';
 import { formatAppointmentNumber, getWaitMessage, INTAKE_PROMPT } from './appointment.lib';
-import { useIntakeContext } from '../../context/IntakeContext';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { PageTransition } from '../../components/PageTransition';
+import { useIntakeContext } from '@/context/IntakeContext';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { PageTransition } from '@/components/PageTransition';
 
 export const AppointmentPage: React.FC = () => {
   const navigate = useNavigate();

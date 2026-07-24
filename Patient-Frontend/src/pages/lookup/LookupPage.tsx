@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ArrowRight, Search, Hash, Phone } from 'lucide-react';
-import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
+import nurqLogo from '@/assets/illustrations/nurq-patient-icon.svg';
 import { LOOKUP_COPY, normalizeRegistrationId, normalizePhone, validateLookupInput } from './lookup.lib';
-import { useLookupPatient } from '../../hooks/useLookupPatient';
-import { Input } from '../../components/Input';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { PageTransition } from '../../components/PageTransition';
+import { useLookupPatient } from '@/hooks/useLookupPatient';
+import { Input } from '@/components/Input';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { PageTransition } from '@/components/PageTransition';
 
 export const LookupPage: React.FC = () => {
   const [mode, setMode] = useState<'id' | 'phone'>('id');

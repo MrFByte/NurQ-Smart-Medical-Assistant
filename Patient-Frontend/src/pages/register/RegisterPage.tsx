@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ArrowRight, User, Phone, Calendar } from 'lucide-react';
-import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
+import nurqLogo from '@/assets/illustrations/nurq-patient-icon.svg';
 import { REGISTER_COPY, validateRegistrationForm, buildRegistrationPayload } from './register.lib';
-import { useRegisterPatient } from '../../hooks/useRegisterPatient';
-import { Input } from '../../components/Input';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { PageTransition } from '../../components/PageTransition';
+import { useRegisterPatient } from '@/hooks/useRegisterPatient';
+import { Input } from '@/components/Input';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { PageTransition } from '@/components/PageTransition';
 
 export const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({ fullName: '', phone: '', age: '', gender: '' });

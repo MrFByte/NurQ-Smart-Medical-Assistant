@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Mic, Keyboard, Volume2, Loader2 } from 'lucide-react';
-import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
+import nurqLogo from '@/assets/illustrations/nurq-patient-icon.svg';
 import { INTAKE_COPY } from './intake.lib';
-import { useIntakeChat } from '../../hooks/useIntakeChat';
-import { useIntakeContext } from '../../context/IntakeContext';
+import { useIntakeChat } from '@/hooks/useIntakeChat';
+import { useIntakeContext } from '@/context/IntakeContext';
 import { useNavigate } from 'react-router-dom';
-import { PageTransition } from '../../components/PageTransition';
+import { PageTransition } from '@/components/PageTransition';
 import { v4 as uuidv4 } from 'uuid';
 
 // ─── Voice phase ────────────────────────────────────────────────────────────

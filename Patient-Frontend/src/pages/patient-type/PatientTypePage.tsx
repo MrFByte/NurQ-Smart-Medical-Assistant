@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserPlus, Search, ArrowRight } from 'lucide-react';
-import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
+import nurqLogo from '@/assets/illustrations/nurq-patient-icon.svg';
 import { PATIENT_TYPE_COPY } from './patientType.lib';
-import { PageTransition } from '../../components/PageTransition';
+import { PageTransition } from '@/components/PageTransition';
 
 export const PatientTypePage: React.FC = () => {
   const navigate = useNavigate();

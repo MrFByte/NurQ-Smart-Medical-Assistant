@@ -1,11 +1,11 @@
 import React from 'react';
 import { AlertTriangle, Phone, ArrowRight } from 'lucide-react';
-import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
+import nurqLogo from '@/assets/illustrations/nurq-patient-icon.svg';
 import { useNavigate } from 'react-router-dom';
 import { EMERGENCY_COPY, getEmergencyNumbers } from './emergency.lib';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { PageTransition } from '../../components/PageTransition';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { PageTransition } from '@/components/PageTransition';
 
 export const EmergencyPage: React.FC = () => {
   const navigate = useNavigate();

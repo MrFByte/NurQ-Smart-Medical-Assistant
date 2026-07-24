@@ -1,8 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@/context/AuthContext'
 import { LogOut } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
-import doctorIcon from '../assets/nurq-doctor-icon.svg'
+import doctorIcon from '@/assets/nurq-doctor-icon.svg'
 
 export default function TopBar() {
   const { logout } = useAuth()

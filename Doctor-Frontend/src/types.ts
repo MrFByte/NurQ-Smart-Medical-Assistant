@@ -54,6 +54,7 @@ export interface SessionDetail {
   session_status: string
   ai_summary: string | null
   clinician_notes: SessionNote[]
+  verified_by: string | null
 }
 
 export interface SessionSummary {

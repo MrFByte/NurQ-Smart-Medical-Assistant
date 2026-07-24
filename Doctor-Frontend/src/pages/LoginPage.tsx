@@ -1,11 +1,10 @@
 import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { useTheme } from '../context/ThemeContext'
+import { useTheme } from '@/context/ThemeContext'
 import { Lock, User, Loader2, AlertCircle, Moon, Sun } from 'lucide-react'
-import doctorIcon from '../assets/nurq-doctor-icon.svg'
+import doctorIcon from '@/assets/nurq-doctor-icon.svg'
 
-import { supabase } from '../lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')

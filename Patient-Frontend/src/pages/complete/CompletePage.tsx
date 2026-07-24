@@ -1,12 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
-import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
+import nurqLogo from '@/assets/illustrations/nurq-patient-icon.svg';
 import { COMPLETE_COPY } from './complete.lib';
-import { useIntakeContext } from '../../context/IntakeContext';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { PageTransition } from '../../components/PageTransition';
+import { useIntakeContext } from '@/context/IntakeContext';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { PageTransition } from '@/components/PageTransition';
 
 export const CompletePage: React.FC = () => {
   const navigate = useNavigate();

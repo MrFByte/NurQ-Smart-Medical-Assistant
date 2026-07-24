@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchQueue } from '../lib/queue'
-import { QueueItem, SessionStatus } from '../types'
-import StatusBadge from '../components/StatusBadge'
-import TopBar from '../components/TopBar'
+import { fetchQueue } from '@/lib/queue'
+import { SessionStatus } from '@/types'
+import StatusBadge from '@/components/StatusBadge'
+import TopBar from '@/components/TopBar'
 import {
   Users, Clock, ChevronRight, AlertTriangle, CheckCircle2, Activity,
 } from 'lucide-react'

@@ -1,10 +1,10 @@
 import { useState, FormEvent } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchSessionDetail, addSessionNote } from '../lib/session_details_lib'
-import { SessionNote, SessionStatus } from '../types'
-import StatusBadge from '../components/StatusBadge'
-import TopBar from '../components/TopBar'
+import { fetchSessionDetail, addSessionNote } from '@/lib/session_details_lib'
+import { SessionNote, SessionStatus } from '@/types'
+import StatusBadge from '@/components/StatusBadge'
+import TopBar from '@/components/TopBar'
 import {
   ArrowLeft, User, Hash, Stethoscope, BadgeCheck, Sparkles,
   Send, MessageSquare, ShieldAlert, Loader2, Activity,

@@ -1,11 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Clock, Users, Sparkles, ArrowRight, Stethoscope, Brain, Activity } from 'lucide-react';
-import doctorsIllustration from '../../assets/illustrations/undraw_doctors_djoj.svg';
-import midwivesIllustration from '../../assets/illustrations/Midwives-rafiki.svg';
-import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
+import doctorsIllustration from '@/assets/illustrations/undraw_doctors_djoj.svg';
+import midwivesIllustration from '@/assets/illustrations/Midwives-rafiki.svg';
+import nurqLogo from '@/assets/illustrations/nurq-patient-icon.svg';
 import { LANDING_COPY, STATS, HOW_IT_WORKS, FEATURES } from './landing.lib';
-import { PageTransition } from '../../components/PageTransition';
+import { PageTransition } from '@/components/PageTransition';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();

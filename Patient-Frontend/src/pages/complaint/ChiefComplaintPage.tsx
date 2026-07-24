@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight, Mic, Keyboard, ShieldAlert, Square } from 'lucide-react';
-import nurqLogo from '../../assets/illustrations/nurq-patient-icon.svg';
+import nurqLogo from '@/assets/illustrations/nurq-patient-icon.svg';
 import { COMPLAINT_COPY, buildSessionPayload, initSpeechRecognition } from './complaint.lib';
-import { useStartSession } from '../../hooks/useStartSession';
-import { useIntakeContext } from '../../context/IntakeContext';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { PageTransition } from '../../components/PageTransition';
+import { useStartSession } from '@/hooks/useStartSession';
+import { useIntakeContext } from '@/context/IntakeContext';
+import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { PageTransition } from '@/components/PageTransition';
 import { useNavigate } from 'react-router-dom';
 
 export const ChiefComplaintPage: React.FC = () => {

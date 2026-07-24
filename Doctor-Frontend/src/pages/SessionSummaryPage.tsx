@@ -1,9 +1,7 @@
-import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchSessionSummary } from '../lib/session_summary_lib'
-import { SessionSummary } from '../types'
-import TopBar from '../components/TopBar'
+import { fetchSessionSummary } from '@/lib/session_summary_lib'
+import TopBar from '@/components/TopBar'
 import { ArrowLeft, Sparkles, Flag, Table2, FileText } from 'lucide-react'
 
 export default function SessionSummaryPage() {

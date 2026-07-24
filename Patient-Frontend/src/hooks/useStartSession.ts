@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
-import { createSession } from '../api/intake.api';
-import { CreateSessionRequest, CreateSessionResponse } from '../api/types';
-import { useIntakeContext } from '../context/IntakeContext';
+import { createSession } from '@/api/intake.api';
+import { CreateSessionRequest, CreateSessionResponse } from '@/api/types';
+import { useIntakeContext } from '@/context/IntakeContext';
 import { useNavigate } from 'react-router-dom';
 
 export const useStartSession = () => {

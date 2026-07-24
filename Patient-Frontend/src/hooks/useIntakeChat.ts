@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { sendMessage, getHistory, sendAudioMessage } from '../api/intake.api';
-import { SendMessageRequest, SendMessageResponse } from '../api/types';
-import { useIntakeContext } from '../context/IntakeContext';
+import { sendMessage, getHistory, sendAudioMessage } from '@/api/intake.api';
+import { SendMessageRequest, SendMessageResponse } from '@/api/types';
+import { useIntakeContext } from '@/context/IntakeContext';
 import { useNavigate } from 'react-router-dom';
 
 export interface ChatMessage {
