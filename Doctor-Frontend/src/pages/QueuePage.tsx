@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchQueue } from '../lib/Queue_lib'
+import { fetchQueue } from '../lib/queue'
 import { QueueItem, SessionStatus } from '../types'
 import StatusBadge from '../components/StatusBadge'
 import TopBar from '../components/TopBar'
