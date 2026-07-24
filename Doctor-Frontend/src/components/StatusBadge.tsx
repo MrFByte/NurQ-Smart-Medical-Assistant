@@ -22,6 +22,12 @@ const STATUS_CONFIG: Record<
     dark: 'dark:bg-danger/15 dark:text-danger dark:border-danger/30',
     dot: 'bg-red-500 dark:bg-danger',
   },
+  abandoned: {
+    label: 'Abandoned',
+    light: 'bg-slate-100 text-slate-700 border-slate-300',
+    dark: 'dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    dot: 'bg-slate-500 dark:bg-slate-400',
+  },
 }
 
 export default function StatusBadge({ status }: { status: SessionStatus }) {

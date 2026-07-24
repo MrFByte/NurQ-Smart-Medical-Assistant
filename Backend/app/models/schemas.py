@@ -177,6 +177,15 @@ class ClinicianSessionView(BaseModel):
     session_status: str
     ai_summary: Optional[str] = None
     clinician_notes: list[ClinicianNoteResponse] = []
+    verified_by: Optional[str] = None
+
+
+class UpdateSessionStatusRequest(BaseModel):
+    status: str
+
+
+class VerifySessionRequest(BaseModel):
+    clinician_name: str
 
 
 class ClinicianQueueItem(BaseModel):

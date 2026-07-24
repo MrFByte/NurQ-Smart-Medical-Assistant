@@ -3,4 +3,6 @@ export const API_ENDPOINTS = {
   SESSION_DETAIL: (sessionId: string) => `/clinician/session/${sessionId}`,
   ADD_NOTE: (sessionId: string) => `/clinician/session/${sessionId}/note`,
   SESSION_SUMMARY: (sessionId: string) => `/clinician/session/${sessionId}/summary`,
+  STATUS: (sessionId: string) => `/clinician/session/${sessionId}/status`,
+  VERIFY: (sessionId: string) => `/clinician/session/${sessionId}/verify`,
 }

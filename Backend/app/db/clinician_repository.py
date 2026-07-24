@@ -106,7 +106,8 @@ class ClinicianRepository:
             emergency_flags=data.get("emergency", {}).get("triggered_keywords", []),
             session_status=intake_row.status,
             ai_summary=None, # Loaded on demand
-            clinician_notes=note_responses
+            clinician_notes=note_responses,
+            verified_by=data.get("verification", {}).get("verified_by")
         )
 
     @staticmethod
@@ -161,3 +162,32 @@ class ClinicianRepository:
         queue.sort(key=lambda x: (x["severity"], x["appt"]))
         
         return [q["item"] for q in queue]
+
+    @staticmethod
+    async def update_session_status(session: AsyncSession, session_id: UUID, status: str) -> None:
+        """Updates the status of an intake session."""
+        stmt = select(IntakeSessionTable).where(IntakeSessionTable.id == session_id)
+        result = await session.execute(stmt)
+        intake_row = result.scalar_one_or_none()
+        
+        if intake_row:
+            intake_row.status = status
+            await session.commit()
+
+    @staticmethod
+    async def verify_session(session: AsyncSession, session_id: UUID, clinician_name: str) -> None:
+        """Marks a session as verified and records the clinician's name."""
+        stmt = select(IntakeSessionTable).where(IntakeSessionTable.id == session_id)
+        result = await session.execute(stmt)
+        intake_row = result.scalar_one_or_none()
+        
+        if intake_row:
+            # We must create a new dict for SQLAlchemy to detect the change in JSONB
+            new_data = dict(intake_row.data)
+            verification = new_data.get("verification", {})
+            verification["is_verified"] = True
+            verification["verified_by"] = clinician_name
+            new_data["verification"] = verification
+            
+            intake_row.data = new_data
+            await session.commit()

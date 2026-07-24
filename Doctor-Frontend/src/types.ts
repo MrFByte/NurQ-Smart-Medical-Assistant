@@ -3,7 +3,7 @@ export interface LoginResponse {
   token_type: string
 }
 
-export type SessionStatus = 'in_progress' | 'completed' | 'emergency_escalated'
+export type SessionStatus = 'in_progress' | 'completed' | 'emergency_escalated' | 'abandoned'
 
 export interface VisitClassificationInfo {
   code: string

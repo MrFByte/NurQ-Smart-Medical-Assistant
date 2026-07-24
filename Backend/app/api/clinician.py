@@ -14,7 +14,9 @@ from app.models.schemas import (
     ClinicianSessionView,
     ClinicianNoteRequest,
     ClinicianNoteResponse,
-    SummaryResponse
+    SummaryResponse,
+    UpdateSessionStatusRequest,
+    VerifySessionRequest
 )
 
 router = APIRouter(
@@ -86,3 +88,23 @@ async def generate_session_summary(
         flags_for_review=summary_result.flags,
         structured_data=session_row.data
     )
+
+
+@router.patch("/session/{session_id}/status")
+async def update_session_status(
+    session_id: UUID, 
+    request: UpdateSessionStatusRequest, 
+    db: AsyncSession = Depends(get_db_session)
+):
+    await ClinicianRepository.update_session_status(db, session_id, request.status)
+    return {"message": "Status updated successfully"}
+
+
+@router.post("/session/{session_id}/verify")
+async def verify_session(
+    session_id: UUID, 
+    request: VerifySessionRequest, 
+    db: AsyncSession = Depends(get_db_session)
+):
+    await ClinicianRepository.verify_session(db, session_id, request.clinician_name)
+    return {"message": "Session verified successfully"}
