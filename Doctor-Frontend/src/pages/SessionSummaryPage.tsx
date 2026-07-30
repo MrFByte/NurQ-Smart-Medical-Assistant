@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchSessionSummary } from '@/lib/session_summary_lib'
 import TopBar from '@/components/TopBar'
-import { ArrowLeft, Sparkles, Flag, Table2, FileText } from 'lucide-react'
+import { ArrowLeft, Sparkles, Flag, FileText, Clock } from 'lucide-react'
 
 export default function SessionSummaryPage() {
   const { id } = useParams<{ id: string }>()
@@ -37,10 +37,7 @@ export default function SessionSummaryPage() {
     )
   }
 
-  // Safely get entries or empty array if structured_data is not an object or is missing
-  const structuredEntries = summary.structured_data && typeof summary.structured_data === 'object' 
-    ? Object.entries(summary.structured_data) 
-    : []
+  const generatedAtLabel = new Date(summary.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
   return (
     <div className="min-h-screen">
@@ -66,10 +63,17 @@ export default function SessionSummaryPage() {
 
         {/* Narrative summary */}
         <div className="glass p-6 mb-6 animate-slide-up">
-          <h2 className="font-display text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2 mb-4">
-            <FileText className="h-5 w-5 text-accent-600 dark:text-accent-400" />
-            Clinician Summary
-          </h2>
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <h2 className="font-display text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+              <FileText className="h-5 w-5 text-accent-600 dark:text-accent-400" />
+              Clinician Summary
+            </h2>
+            <span className="inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+              <Clock className="h-3.5 w-3.5" />
+              Summary generated {generatedAtLabel}
+              {summary.from_cache && ' — cached'}
+            </span>
+          </div>
           <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-[15px]">
             {summary.clinician_summary}
           </p>
@@ -98,34 +102,6 @@ export default function SessionSummaryPage() {
               ))}
             </ul>
           )}
-        </div>
-
-        {/* Structured data table */}
-        <div className="glass p-6 animate-slide-up" style={{ animationDelay: '160ms' }}>
-          <h2 className="font-display text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2 mb-4">
-            <Table2 className="h-5 w-5 text-accent-600 dark:text-accent-400" />
-            Structured Data
-          </h2>
-          <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-100 dark:bg-white/[0.04]">
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-semibold">Field</th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-semibold">Value</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                {structuredEntries.map(([key, value]) => (
-                  <tr key={key} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 font-mono">{key}</td>
-                    <td className="px-4 py-3 text-sm text-slate-800 dark:text-white">
-                      {Array.isArray(value) ? value.join(', ') : String(value)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       </main>
     </div>

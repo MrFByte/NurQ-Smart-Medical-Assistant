@@ -17,6 +17,7 @@ export interface CreateSessionRequest {
   patient_id: string;
   chief_complaint_text: string;
   disclaimer_acknowledged: boolean;
+  visit_type?: 'new_issue' | 'continuation';
 }
 
 export interface VisitClassificationInfo {

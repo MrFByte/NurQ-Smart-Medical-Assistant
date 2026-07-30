@@ -11,14 +11,15 @@ import { useNavigate } from 'react-router-dom';
 
 export const ChiefComplaintPage: React.FC = () => {
   const navigate = useNavigate();
-  const { patientId } = useIntakeContext();
+  const { patientId, isReturningPatient } = useIntakeContext();
   const { mutate, isPending, error: apiError } = useStartSession();
-  
+
   const [complaint, setComplaint] = useState('');
   const [interimText, setInterimText] = useState('');
   const [inputMode, setInputMode] = useState<'type' | 'speak'>('type');
   const [isRecording, setIsRecording] = useState(false);
   const [hasBrowserSupport, setHasBrowserSupport] = useState(true);
+  const [visitType, setVisitType] = useState<'new_issue' | 'continuation' | null>(null);
 
   const recognitionRef = useRef<any>(null);
 
@@ -69,16 +70,19 @@ export const ChiefComplaintPage: React.FC = () => {
     }
   };
 
+  const requiresVisitType = isReturningPatient;
+  const canSubmit = complaint.trim() && patientId && (!requiresVisitType || visitType);
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!complaint.trim() || !patientId) return;
-    
+    if (!canSubmit || !patientId) return;
+
     if (isRecording) {
       recognitionRef.current?.stop();
       setIsRecording(false);
     }
 
-    mutate(buildSessionPayload(patientId, complaint), {
+    mutate(buildSessionPayload(patientId, complaint, visitType ?? undefined), {
       onSuccess: () => {
         navigate('/appointment');
       }
@@ -183,17 +187,49 @@ export const ChiefComplaintPage: React.FC = () => {
               )}
 
               <div className="mt-auto">
+                {isReturningPatient && (
+                  <div className="mb-6">
+                    <p className="text-sm font-bold text-gray-700 mb-3 text-center">
+                      {COMPLAINT_COPY.visitType.question}
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setVisitType('continuation')}
+                        className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold border-2 transition-colors ${
+                          visitType === 'continuation'
+                            ? 'bg-blue-500 border-blue-500 text-white'
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300'
+                        }`}
+                      >
+                        {COMPLAINT_COPY.visitType.sameIssue}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVisitType('new_issue')}
+                        className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold border-2 transition-colors ${
+                          visitType === 'new_issue'
+                            ? 'bg-blue-500 border-blue-500 text-white'
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300'
+                        }`}
+                      >
+                        {COMPLAINT_COPY.visitType.newIssue}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2 justify-center mb-4">
                   <ShieldAlert size={14} className="text-gray-400" />
                   <p className="text-xs text-gray-500">
                     {COMPLAINT_COPY.disclaimer}
                   </p>
                 </div>
-                
+
                 <Button
                   fullWidth
                   onClick={() => handleSubmit()}
-                  disabled={!complaint.trim() || isPending || isRecording}
+                  disabled={!canSubmit || isPending || isRecording}
                   icon={<ArrowRight size={18} className={isPending ? 'hidden' : ''} />}
                 >
                   {isPending ? COMPLAINT_COPY.status.processing : COMPLAINT_COPY.submitText}

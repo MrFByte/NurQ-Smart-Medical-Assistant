@@ -11,7 +11,7 @@ export const useLookupPatient = () => {
   const lookupById = useMutation<LookupPatientResponse, Error, LookupPatientRequest>({
     mutationFn: lookupPatient,
     onSuccess: (data) => {
-      setPatient(data.patient_id, data.registration_id);
+      setPatient(data.patient_id, data.registration_id, true);
       navigate('/complaint');
     },
   });
@@ -19,7 +19,7 @@ export const useLookupPatient = () => {
   const lookupByPhone = useMutation<LookupPatientResponse, Error, LookupByPhoneRequest>({
     mutationFn: lookupPatientByPhone,
     onSuccess: (data) => {
-      setPatient(data.patient_id, data.registration_id);
+      setPatient(data.patient_id, data.registration_id, true);
       navigate('/complaint');
     },
   });

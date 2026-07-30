@@ -18,8 +18,10 @@ export const IntakePage: React.FC = () => {
     messages,
     sendUserMessage,
     sendInitialComplaint,
+    sendAudioTurn,
     isPending,
     isLoadingHistory,
+    isSpeaking,
     error: apiError,
     clearError,
   } = useIntakeChat();
@@ -37,13 +39,23 @@ export const IntakePage: React.FC = () => {
   const voiceOnRef = useRef(false);           // true while voice session is active
   const isListeningRef = useRef(false);       // guards against overlapping .start() calls
   const recognitionRef = useRef<any>(null);
-  const spokenIds = useRef(new Set<string>()); // tracks which AI messages we've already spoken
+  const spokenIds = useRef(new Set<string>()); // tracks which AI messages we've already spoken/fallen-back for
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // debounce timer
+
+  // Real microphone capture, sent to the backend Whisper/edge-tts pipeline.
+  // The Web Speech API below is kept ONLY for live captions and to detect
+  // end-of-turn silence — it is never what gets sent to the server.
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const prevIsSpeakingRef = useRef(false);
 
   // Forward refs so callbacks can always call the latest version
   const startListeningFn = useRef<() => void>(() => {});
   const sendUserMessageRef = useRef(sendUserMessage);
   sendUserMessageRef.current = sendUserMessage;
+  const sendAudioTurnRef = useRef(sendAudioTurn);
+  sendAudioTurnRef.current = sendAudioTurn;
 
   // ─── Redirect if no session ──────────────────────────────────────────────
   useEffect(() => {
@@ -71,8 +83,27 @@ export const IntakePage: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isPending, voicePhase]);
 
-  // ─── Browser TTS helper ───────────────────────────────────────────────────
-  const speakText = useCallback((text: string) => {
+  // ─── Acquire the real microphone stream once per voice session ────────────
+  // Kept open for the whole session (rather than re-requested every turn) so
+  // there's no repeated permission prompt / mic-indicator flicker and no
+  // extra latency starting the next recording.
+  const ensureMicStream = useCallback(async () => {
+    if (micStreamRef.current) return micStreamRef.current;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream;
+      return stream;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // ─── Browser TTS fallback ──────────────────────────────────────────────────
+  // Only used when the backend didn't return synthesised audio for a turn
+  // (currently: the auto-sent initial complaint, which goes through the text
+  // endpoint). Every other turn is voiced by the real backend pipeline
+  // (Groq Whisper in, edge-tts out) via sendAudioTurn/playAudioDataUri.
+  const speakFallback = useCallback((text: string) => {
     if (!voiceOnRef.current) return;
     if (!('speechSynthesis' in window)) {
       // No TTS support — just restart listening
@@ -125,6 +156,29 @@ export const IntakePage: React.FC = () => {
     }
   }, []); // stable — reads from refs/window only
 
+  // ─── Dispatch a completed turn to the backend ─────────────────────────────
+  // Stops the in-flight MediaRecorder and sends the real audio blob through
+  // the Whisper/edge-tts pipeline. Falls back to sending the Web Speech API
+  // transcript as plain text only if no recording was available, so a turn
+  // is never silently lost.
+  const finishTurn = useCallback((heard: string) => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        audioChunksRef.current = [];
+        sendAudioTurnRef.current(blob, heard);
+      };
+      try {
+        recorder.stop();
+      } catch {
+        sendUserMessageRef.current(uuidv4(), heard);
+      }
+    } else {
+      sendUserMessageRef.current(uuidv4(), heard);
+    }
+  }, []); // stable — reads from refs only
+
   // ─── Speech Recognition ───────────────────────────────────────────────────
   const startListening = useCallback(() => {
     if (!voiceOnRef.current) return;
@@ -164,7 +218,7 @@ export const IntakePage: React.FC = () => {
           // Stop the recognition first so it doesn't capture our own TTS
           try { recognition.stop(); } catch (_) {}
           setVoicePhase('processing');
-          sendUserMessageRef.current(uuidv4(), heard);
+          finishTurn(heard);
         }
       };
 
@@ -210,7 +264,7 @@ export const IntakePage: React.FC = () => {
         if (heard && voiceOnRef.current) {
           setInterimText('');
           setVoicePhase('processing');
-          sendUserMessageRef.current(uuidv4(), heard);
+          finishTurn(heard);
         } else if (voiceOnRef.current) {
           // Recognition stopped without speech (e.g. no-speech timeout) — restart
           setInterimText('');
@@ -243,6 +297,27 @@ export const IntakePage: React.FC = () => {
       };
 
       recognitionRef.current = recognition;
+
+      // Start real audio capture in lockstep with the caption recognizer —
+      // this is what actually gets sent to the backend Whisper/edge-tts
+      // pipeline via finishTurn() above.
+      if (micStreamRef.current) {
+        try {
+          audioChunksRef.current = [];
+          const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? 'audio/webm;codecs=opus'
+            : 'audio/webm';
+          const recorder = new MediaRecorder(micStreamRef.current, { mimeType });
+          recorder.ondataavailable = (e: BlobEvent) => {
+            if (e.data.size > 0) audioChunksRef.current.push(e.data);
+          };
+          recorder.start();
+          mediaRecorderRef.current = recorder;
+        } catch {
+          mediaRecorderRef.current = null;
+        }
+      }
+
       try {
         recognition.start();
       } catch (_) {
@@ -250,27 +325,43 @@ export const IntakePage: React.FC = () => {
         setTimeout(() => startListeningFn.current(), 600);
       }
     }, 150);
-  }, []); // stable — reads from refs only
+  }, [finishTurn]); // finishTurn is stable (empty deps) — otherwise reads from refs only
 
   // Keep the forward ref in sync
   startListeningFn.current = startListening;
 
-  // ─── Watch messages: speak new AI responses in voice mode ─────────────────
+  // ─── Watch messages: browser-TTS fallback ONLY when the backend didn't
+  // synthesise audio for this turn (e.g. the auto-sent initial complaint,
+  // which goes through the text endpoint, not sendAudioTurn). For every
+  // other turn, the real backend audio element drives playback and the
+  // isSpeaking watcher below handles resuming listening afterwards. ────────
   useEffect(() => {
     if (inputMode !== 'speak' || isPending || !voiceOnRef.current) return;
     const last = messages[messages.length - 1];
     if (!last || last.role !== 'assistant' || spokenIds.current.has(last.id)) return;
     spokenIds.current.add(last.id);
-    speakText(last.content);
-  }, [messages, isPending, inputMode, speakText]);
+    if (!last.hasAudio) {
+      speakFallback(last.content);
+    }
+  }, [messages, isPending, inputMode, speakFallback]);
+
+  // ─── Resume listening once backend-synthesised audio finishes playing ─────
+  useEffect(() => {
+    if (prevIsSpeakingRef.current && !isSpeaking && voiceOnRef.current) {
+      setVoicePhase('idle');
+      setTimeout(() => startListeningFn.current(), 350);
+    }
+    prevIsSpeakingRef.current = isSpeaking;
+  }, [isSpeaking]);
 
   // ─── Start / stop voice session when mode changes ─────────────────────────
   useEffect(() => {
     if (inputMode === 'speak' && hasSpeechSupport) {
       voiceOnRef.current = true;
+      ensureMicStream();
       // Only start listening if there's no pending AI message yet to speak.
-      // If there is, the messages watcher above will speak it and then
-      // call startListening via speakText's onend.
+      // If there is, the messages watcher above (or the isSpeaking watcher,
+      // for backend audio) will trigger startListening once it's done.
       const last = messages[messages.length - 1];
       const hasUnspokenAI =
         last?.role === 'assistant' && !spokenIds.current.has(last.id);
@@ -285,6 +376,11 @@ export const IntakePage: React.FC = () => {
         silenceTimerRef.current = null;
       }
       recognitionRef.current?.abort();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try { mediaRecorderRef.current.stop(); } catch (_) {}
+      }
+      micStreamRef.current?.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
       setVoicePhase('idle');
       setInterimText('');
@@ -304,6 +400,11 @@ export const IntakePage: React.FC = () => {
         silenceTimerRef.current = null;
       }
       recognitionRef.current?.abort();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try { mediaRecorderRef.current.stop(); } catch (_) {}
+      }
+      micStreamRef.current?.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     };
   }, []);
@@ -318,6 +419,7 @@ export const IntakePage: React.FC = () => {
 
   // ─── Derived display state ────────────────────────────────────────────────
   const displayPhase: VoicePhase =
+    isSpeaking ? 'speaking' :
     isPending ? 'processing' :
     voicePhase;
 

@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { LogOut } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
+import ClinicianSelector from './ClinicianSelector'
 import doctorIcon from '@/assets/nurq-doctor-icon.svg'
 
 export default function TopBar() {
@@ -26,6 +27,7 @@ export default function TopBar() {
           </div>
         </Link>
         <div className="flex items-center gap-3">
+          <ClinicianSelector />
           <ThemeToggle />
           <button onClick={handleLogout} className="btn-ghost text-sm">
             <LogOut className="h-4 w-4" />

@@ -1,8 +1,18 @@
 export const API_ENDPOINTS = {
   QUEUE: '/clinician/queue',
   SESSION_DETAIL: (sessionId: string) => `/clinician/session/${sessionId}`,
+  NOTES: (sessionId: string) => `/clinician/session/${sessionId}/notes`,
   ADD_NOTE: (sessionId: string) => `/clinician/session/${sessionId}/note`,
   SESSION_SUMMARY: (sessionId: string) => `/clinician/session/${sessionId}/summary`,
   STATUS: (sessionId: string) => `/clinician/session/${sessionId}/status`,
   VERIFY: (sessionId: string) => `/clinician/session/${sessionId}/verify`,
+  CONVERSATION: (sessionId: string) => `/clinician/session/${sessionId}/conversation`,
+  PRESCRIPTIONS: (sessionId: string) => `/clinician/session/${sessionId}/prescriptions`,
+  ADD_PRESCRIPTION: (sessionId: string) => `/clinician/session/${sessionId}/prescription`,
+  PATIENT_MEDICATIONS: (patientId: string) => `/clinician/patient/${patientId}/medications`,
+  PATIENT_ALLERGIES: (patientId: string) => `/clinician/patient/${patientId}/allergies`,
+  PATIENT_CONDITIONS: (patientId: string) => `/clinician/patient/${patientId}/conditions`,
+  PATIENT_HISTORY: (patientId: string) => `/clinician/patient/${patientId}/history`,
+  PATIENT_VISITS: (patientId: string) => `/clinician/patient/${patientId}/visits`,
+  CLINICIANS: '/clinician/clinicians',
 }

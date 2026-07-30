@@ -7,8 +7,14 @@ export const fetchSessionDetail = async (sessionId: string): Promise<SessionDeta
   return data
 }
 
+export const fetchSessionNotes = async (sessionId: string): Promise<SessionNote[]> => {
+  const { data } = await apiClient.get<SessionNote[]>(API_ENDPOINTS.NOTES(sessionId))
+  return data
+}
+
 export interface AddNotePayload {
-  author_name: string
+  author_name?: string
+  clinician_id?: string
   note_type: string
   content: string
 }
@@ -22,7 +28,13 @@ export const updateSessionStatus = async (sessionId: string, status: string): Pr
   await apiClient.patch(API_ENDPOINTS.STATUS(sessionId), { status })
 }
 
-export const verifySession = async (sessionId: string, clinicianName: string): Promise<void> => {
-  await apiClient.post(API_ENDPOINTS.VERIFY(sessionId), { clinician_name: clinicianName })
+export const verifySession = async (
+  sessionId: string,
+  params: { clinicianName?: string; clinicianId?: string }
+): Promise<void> => {
+  await apiClient.post(API_ENDPOINTS.VERIFY(sessionId), {
+    clinician_name: params.clinicianName,
+    clinician_id: params.clinicianId,
+  })
 }
 

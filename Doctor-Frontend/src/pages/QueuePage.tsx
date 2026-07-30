@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchQueue } from '@/lib/queue'
 import { SessionStatus } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
+import VisitTypeBadge from '@/components/VisitTypeBadge'
+import SafetyCheckBadge from '@/components/SafetyCheckBadge'
 import TopBar from '@/components/TopBar'
 import {
   Users, Clock, ChevronRight, AlertTriangle, CheckCircle2, Activity,
@@ -115,6 +117,11 @@ export default function QueuePage() {
                     {item.patient_name || 'Unknown Patient'}
                   </div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 md:hidden mt-1">{item.chief_complaint}</div>
+                  {item.visit_type && (
+                    <div className="mt-1.5">
+                      <VisitTypeBadge visitType={item.visit_type} />
+                    </div>
+                  )}
                 </div>
 
                 {/* Chief complaint */}
@@ -123,8 +130,9 @@ export default function QueuePage() {
                 </div>
 
                 {/* Status */}
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 flex flex-wrap items-center gap-2">
                   <StatusBadge status={item.session_status as SessionStatus} />
+                  {item.emergency_check_failed && <SafetyCheckBadge />}
                 </div>
 
                 {/* Action */}

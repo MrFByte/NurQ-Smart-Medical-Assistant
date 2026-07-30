@@ -15,6 +15,11 @@ export const COMPLAINT_COPY = {
   submitText: 'Continue',
   micTitle: 'Speak your symptoms',
   micHint: 'Tap to speak again',
+  visitType: {
+    question: 'Is this about the same issue as last time, or something new?',
+    sameIssue: 'Same issue',
+    newIssue: 'Something new',
+  },
 };
 
 export const EMERGENCY_KEYWORDS = [
@@ -28,11 +33,16 @@ export const isEmergency = (text: string): boolean => {
   return EMERGENCY_KEYWORDS.some(keyword => lowerText.includes(keyword));
 };
 
-export const buildSessionPayload = (patientId: string, complaint: string): CreateSessionRequest => {
+export const buildSessionPayload = (
+  patientId: string,
+  complaint: string,
+  visitType?: 'new_issue' | 'continuation'
+): CreateSessionRequest => {
   return {
     patient_id: patientId,
     chief_complaint_text: complaint.trim(),
     disclaimer_acknowledged: true, // Always true for POC
+    ...(visitType ? { visit_type: visitType } : {}),
   };
 };
 

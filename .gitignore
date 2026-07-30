@@ -47,6 +47,7 @@ coverage/
 *.swo
 *~
 .fleet/
+.claude
 
 # OS specific
 .DS_Store
@@ -64,3 +65,7 @@ Thumbs.db
 
 # Documentation and planning
 Plan/
+.todo/
+
+# Ignore Backend updates
+Backend/

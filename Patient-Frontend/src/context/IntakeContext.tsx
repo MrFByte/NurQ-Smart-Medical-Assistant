@@ -5,6 +5,7 @@ const SESSION_KEY = 'nurq_intake_session';
 interface IntakeState {
   patientId: string | null;
   registrationId: string | null;
+  isReturningPatient: boolean;
   sessionId: string | null;
   appointmentNumber: string | null;
   chiefComplaint: string | null;
@@ -12,7 +13,7 @@ interface IntakeState {
 }
 
 interface IntakeContextType extends IntakeState {
-  setPatient: (patientId: string, registrationId: string) => void;
+  setPatient: (patientId: string, registrationId: string, isReturningPatient?: boolean) => void;
   setSession: (sessionId: string, appointmentNumber: string | null, chiefComplaint: string) => void;
   setEmergency: (isEmergency: boolean) => void;
   reset: () => void;
@@ -21,6 +22,7 @@ interface IntakeContextType extends IntakeState {
 const initialState: IntakeState = {
   patientId: null,
   registrationId: null,
+  isReturningPatient: false,
   sessionId: null,
   appointmentNumber: null,
   chiefComplaint: null,
@@ -55,8 +57,8 @@ export const IntakeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     saveState(state);
   }, [state]);
 
-  const setPatient = (patientId: string, registrationId: string) => {
-    setState((prev) => ({ ...prev, patientId, registrationId }));
+  const setPatient = (patientId: string, registrationId: string, isReturningPatient: boolean = false) => {
+    setState((prev) => ({ ...prev, patientId, registrationId, isReturningPatient }));
   };
 
   const setSession = (sessionId: string, appointmentNumber: string | null = null, chiefComplaint: string = '') => {

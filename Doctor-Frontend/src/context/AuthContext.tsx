@@ -8,13 +8,29 @@ interface AuthContextValue {
   logout: () => Promise<void>
   isAuthenticated: boolean
   isLoading: boolean
+  activeClinicianId: string | null
+  setActiveClinicianId: (id: string | null) => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
+const ACTIVE_CLINICIAN_STORAGE_KEY = 'nurq.activeClinicianId'
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [activeClinicianId, setActiveClinicianIdState] = useState<string | null>(
+    () => localStorage.getItem(ACTIVE_CLINICIAN_STORAGE_KEY)
+  )
+
+  const setActiveClinicianId = (id: string | null) => {
+    setActiveClinicianIdState(id)
+    if (id) {
+      localStorage.setItem(ACTIVE_CLINICIAN_STORAGE_KEY, id)
+    } else {
+      localStorage.removeItem(ACTIVE_CLINICIAN_STORAGE_KEY)
+    }
+  }
 
   useEffect(() => {
     // Get initial session
@@ -43,7 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     token: session?.access_token ?? null,
     logout,
     isAuthenticated: !!session,
-    isLoading
+    isLoading,
+    activeClinicianId,
+    setActiveClinicianId
   }
 
   return (

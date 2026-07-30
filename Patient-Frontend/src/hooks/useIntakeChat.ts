@@ -9,6 +9,11 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  /** True if this assistant message had backend-synthesised (edge-tts) audio.
+   * Used by IntakePage to decide whether it still needs a browser-TTS
+   * fallback (e.g. the auto-sent initial complaint, which goes through the
+   * text endpoint and so never gets audio_url). */
+  hasAudio?: boolean;
 }
 
 /** Play a base64 audio/mp3 data URI. Returns a Promise that resolves when playback ends. */
@@ -59,7 +64,7 @@ export const useIntakeChat = () => {
   const handleSuccess = useCallback(async (data: SendMessageResponse) => {
     setMessages((prev) => [
       ...prev,
-      { id: `ast-${Date.now()}`, role: 'assistant', content: data.assistant_message },
+      { id: `ast-${Date.now()}`, role: 'assistant', content: data.assistant_message, hasAudio: !!data.audio_url },
     ]);
 
     // Play TTS audio if the response came from /audio-message endpoint
