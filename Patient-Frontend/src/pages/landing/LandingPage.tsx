@@ -4,13 +4,14 @@ import { ShieldCheck, Clock, Users, Sparkles, ArrowRight, Stethoscope, Brain, Ac
 import doctorsIllustration from '@/assets/illustrations/undraw_doctors_djoj.svg';
 import midwivesIllustration from '@/assets/illustrations/Midwives-rafiki.svg';
 import nurqLogo from '@/assets/illustrations/nurq-patient-icon.svg';
-import { LANDING_COPY, STATS, HOW_IT_WORKS, FEATURES } from './landing.lib';
+import { LANDING_COPY, STATS, HOW_IT_WORKS, FEATURES, triggerHealthCheck } from './landing.lib';
 import { PageTransition } from '@/components/PageTransition';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGetAppointment = () => {
+    triggerHealthCheck();
     navigate('/patient-type');
   };
 

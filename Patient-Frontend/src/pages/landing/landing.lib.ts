@@ -1,3 +1,5 @@
+import { checkHealthSilent } from '@/api/service.api';
+
 export const LANDING_COPY = {
   badge: 'Smart Medical Intake',
   headlineStart: 'Healthcare',
@@ -25,3 +27,8 @@ export const HOW_IT_WORKS = [
   { step: '03', title: 'Get token', desc: 'Receive your appointment number instantly after triage.' },
   { step: '04', title: 'Share history', desc: 'Optionally complete your medical history with our assistant.' },
 ];
+
+
+export const triggerHealthCheck = () => {
+  checkHealthSilent();
+};

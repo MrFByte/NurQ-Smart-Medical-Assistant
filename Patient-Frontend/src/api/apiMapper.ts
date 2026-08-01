@@ -10,4 +10,7 @@ export const API = {
     sendAudioMessage: { method: 'POST', path: '/intake/session/:id/audio-message' },
     getHistory:       { method: 'GET',  path: '/intake/session/:id/history' },
   },
+  services: {
+    health: { method: 'GET', path: '/services/health' },
+  },
 } as const;
