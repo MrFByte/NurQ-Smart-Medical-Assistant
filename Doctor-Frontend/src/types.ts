@@ -22,6 +22,7 @@ export interface QueueItem {
   session_status: string
   chief_complaint: string | null
   emergency_check_failed: boolean
+  extraction_check_failed: boolean
   visit_type: VisitType
 }
 
@@ -49,6 +50,7 @@ export interface SessionDetail {
   visit_classification: VisitClassificationInfo
   chief_complaint: string | null
   emergency_check_failed: boolean
+  extraction_check_failed: boolean
   session_status: string
   visit_type: VisitType
   verified_by: string | null

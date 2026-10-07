@@ -10,19 +10,32 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   /** True if this assistant message had backend-synthesised (edge-tts) audio.
-   * Used by IntakePage to decide whether it still needs a browser-TTS
-   * fallback (e.g. the auto-sent initial complaint, which goes through the
-   * text endpoint and so never gets audio_url). */
+   * Used by IntakePage as a signal to fall back to browser TTS on the rare
+   * case backend synthesis failed (e.g. empty edge-tts response). */
   hasAudio?: boolean;
 }
 
-/** Play a base64 audio/mp3 data URI. Returns a Promise that resolves when playback ends. */
+/** Play a base64 audio/mp3 data URI. Returns a Promise that resolves when playback ends.
+ * Guaranteed to resolve: on ended, on error, on rejected play(), and via a
+ * duration-based safety timeout — so isSpeaking can never get stuck true. */
 const playAudioDataUri = (dataUri: string): Promise<void> => {
   return new Promise((resolve) => {
     const audio = new Audio(dataUri);
-    audio.onended = () => resolve();
-    audio.onerror = () => resolve(); // resolve even on error so UI doesn't lock
-    audio.play().catch(() => resolve());
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    audio.onended = finish;
+    audio.onerror = finish;
+    // Safety net for decode stalls where neither ended nor error ever fires
+    audio.onloadedmetadata = () => {
+      const ms = isFinite(audio.duration) ? audio.duration * 1000 + 3000 : 60000;
+      setTimeout(finish, ms);
+    };
+    setTimeout(finish, 60000);
+    audio.play().catch(finish);
   });
 };
 
@@ -60,18 +73,31 @@ export const useIntakeChat = () => {
     }
   }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Shared handler for successful AI responses — appends message + plays TTS if present */
-  const handleSuccess = useCallback(async (data: SendMessageResponse) => {
+  /** Shared handler for successful AI responses — appends message + plays TTS if present.
+   *
+   * IMPORTANT: This callback must NOT be async / must not await long-running
+   * work.  React Query v5 awaits the onSuccess callback inside the mutation's
+   * execute() cycle, so an `await playAudioDataUri(…)` here would keep
+   * `isPending === true` for the entire duration of audio playback — which is
+   * what was causing the "⏳ Thinking…" / loading-dots to stay visible even
+   * though the assistant message was already rendered.
+   *
+   * Audio playback is started as a fire-and-forget `.then()` so the mutation
+   * resolves instantly and isPending flips to false immediately.
+   */
+  const handleSuccess = useCallback((data: SendMessageResponse) => {
     setMessages((prev) => [
       ...prev,
       { id: `ast-${Date.now()}`, role: 'assistant', content: data.assistant_message, hasAudio: !!data.audio_url },
     ]);
 
-    // Play TTS audio if the response came from /audio-message endpoint
+    // Play TTS audio if the response came from /audio-message endpoint.
+    // Fire-and-forget — do NOT await; see docstring above.
     if (data.audio_url) {
       setIsSpeaking(true);
-      await playAudioDataUri(data.audio_url);
-      setIsSpeaking(false);
+      playAudioDataUri(data.audio_url).then(() => {
+        setIsSpeaking(false);
+      });
     }
 
     if (data.session_status === 'completed') {
@@ -118,9 +144,11 @@ export const useIntakeChat = () => {
 
   // Auto-sends the chief complaint as the very first message so the
   // orchestrator can respond with the first meaningful follow-up question.
+  // Requests backend-synthesised (edge-tts) audio for the reply so the voice
+  // pipeline is live from the first turn — no browser-TTS fallback needed.
   const sendInitialComplaint = (complaint: string) => {
     setMessages([{ id: 'initial-complaint', role: 'user', content: complaint }]);
-    mutateRef.current({ content: complaint });
+    mutateRef.current({ content: complaint, synthesize_audio: true });
   };
 
   /**

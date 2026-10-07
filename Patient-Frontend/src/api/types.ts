@@ -47,6 +47,7 @@ export interface CreateSessionResponse {
 
 export interface SendMessageRequest {
   content: string;
+  synthesize_audio?: boolean;
 }
 
 export interface ChatTurn {

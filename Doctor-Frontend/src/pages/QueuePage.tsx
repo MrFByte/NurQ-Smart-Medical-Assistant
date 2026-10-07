@@ -6,6 +6,7 @@ import { SessionStatus } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 import VisitTypeBadge from '@/components/VisitTypeBadge'
 import SafetyCheckBadge from '@/components/SafetyCheckBadge'
+import DataQualityBadge from '@/components/DataQualityBadge'
 import TopBar from '@/components/TopBar'
 import {
   Users, Clock, ChevronRight, AlertTriangle, CheckCircle2, Activity,
@@ -133,6 +134,7 @@ export default function QueuePage() {
                 <div className="md:col-span-2 flex flex-wrap items-center gap-2">
                   <StatusBadge status={item.session_status as SessionStatus} />
                   {item.emergency_check_failed && <SafetyCheckBadge />}
+                  {item.extraction_check_failed && <DataQualityBadge />}
                 </div>
 
                 {/* Action */}

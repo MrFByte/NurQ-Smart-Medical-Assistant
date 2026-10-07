@@ -6,6 +6,7 @@ import { updateSessionStatus } from '@/lib/session_details_lib'
 import StatusBadge from '@/components/StatusBadge'
 import VisitTypeBadge from '@/components/VisitTypeBadge'
 import SafetyCheckBadge from '@/components/SafetyCheckBadge'
+import DataQualityBadge from '@/components/DataQualityBadge'
 import { SessionDetail, SessionStatus } from '@/types'
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
@@ -69,6 +70,7 @@ export default function PatientHeaderCard({ sessionId, session }: { sessionId: s
               </div>
               <VisitTypeBadge visitType={session.visit_type} />
               {session.emergency_check_failed && <SafetyCheckBadge />}
+              {session.extraction_check_failed && <DataQualityBadge />}
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-sm">
               Session ID: <span className="text-slate-600 dark:text-slate-300 font-mono">{session.session_id}</span>
